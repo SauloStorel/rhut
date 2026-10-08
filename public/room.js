@@ -277,7 +277,7 @@ function showControls(mode) {
 function showBranding(guild) {
   if (!guild) return;
 
-  document.title = `${guild.name} · Transmissão`;
+  document.title = `${guild.name} · rhut`;
   document.querySelector("#brand-name").textContent = guild.name;
   if (!guild.iconUrl) return;
 

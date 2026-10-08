@@ -1,12 +1,12 @@
 {
-  "name": "discord-live",
+  "name": "rhut",
   "version": "1.0.0",
   "description": "Transmissão de tela para servidores do Discord, direto no navegador, via WebRTC e Cloudflare Workers.",
   "license": "MIT",
   "author": "Saulo José Storel de Moura Abreu",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/SauloStorel/discord-live.git"
+    "url": "git+https://github.com/SauloStorel/rhut.git"
   },
   "private": true,
   "type": "module",

@@ -1,6 +1,6 @@
-# discord-live
+<p align="center"><img src="docs/banner.png" alt="rhut"></p>
 
-Transmissão de tela para o seu servidor do Discord, direto no navegador.
+**rhut** é transmissão de tela para o seu servidor do Discord, direto no navegador.
 
 Alguém digita `/live`, o bot posta um aviso no canal e todo mundo entra numa sala na web. Quem transmite compartilha a janela do jogo com o som dela, e o resto assiste com atraso baixo, em até 1080p a 60 fps. O vídeo vai direto de um navegador para o outro (WebRTC), sem passar por servidor, e tudo roda no plano gratuito da Cloudflare.
 
@@ -56,14 +56,14 @@ Você vai precisar de uma conta gratuita na [Cloudflare](https://dash.cloudflare
 ### 2. Publicar na Cloudflare
 
 ```sh
-git clone https://github.com/SauloStorel/discord-live.git
-cd discord-live
+git clone https://github.com/SauloStorel/rhut.git
+cd rhut
 npm install
 npx wrangler login
 npx wrangler deploy
 ```
 
-O deploy mostra a URL do Worker, algo como `https://discord-live.SEU-USUARIO.workers.dev`. Depois cadastre os segredos:
+O deploy mostra a URL do Worker, algo como `https://rhut.SEU-USUARIO.workers.dev`. Depois cadastre os segredos:
 
 ```sh
 npx wrangler secret put DISCORD_PUBLIC_KEY   # a Public Key do passo 1
@@ -73,7 +73,7 @@ openssl rand -hex 32 | npx wrangler secret put SESSION_SECRET
 
 ### 3. Ligar o Discord ao Worker
 
-1. No portal do Discord, em **General Information > Interactions Endpoint URL**, coloque `https://discord-live.SEU-USUARIO.workers.dev/interactions` e salve. O Discord testa a URL na hora.
+1. No portal do Discord, em **General Information > Interactions Endpoint URL**, coloque `https://rhut.SEU-USUARIO.workers.dev/interactions` e salve. O Discord testa a URL na hora.
 2. Cadastre o comando `/live`:
 
    ```sh
