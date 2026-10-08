@@ -1,0 +1,7 @@
+DISCORD_PUBLIC_KEY=
+DISCORD_BOT_TOKEN=
+# Assina os links pessoais da sala. Qualquer texto aleatório longo (ex: openssl rand -hex 32)
+SESSION_SECRET=
+# Opcional: sem isso a sala usa só STUN (funciona na maioria das redes, mas não em todas)
+TURN_KEY_ID=
+TURN_KEY_API_TOKEN=
