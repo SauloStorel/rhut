@@ -777,6 +777,19 @@ img { display: block; max-width: 100%; height: auto; }
 .limits-list dt { font-weight: 650; }
 .limits-list dd { margin: 6px 0 0; color: var(--muted); font-size: 0.95rem; }
 
+.needs { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+
+.needs li { display: flex; align-items: center; gap: 10px; }
+
+.needs li::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--text);
+}
+
 /* ---------- Fechamento ---------- */
 
 .closing {
