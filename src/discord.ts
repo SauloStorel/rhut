@@ -8,6 +8,7 @@ import { newRoomId } from "./room-id";
 const InteractionType = { PING: 1, APPLICATION_COMMAND: 2, MESSAGE_COMPONENT: 3 } as const;
 const ResponseType = { PONG: 1, CHANNEL_MESSAGE: 4, DEFERRED_UPDATE_MESSAGE: 6 } as const;
 const EPHEMERAL = 1 << 6;
+const PUBLIC_KEY_PATTERN = /^[0-9a-f]{64}$/i;
 
 type Interaction = {
   type: number;
@@ -79,6 +80,12 @@ export async function handleInteraction(request: Request, env: Env) {
 }
 
 async function isSignedByDiscord(request: Request, body: string, publicKey: string) {
+  // Sem essa checagem, uma chave vazia ou colada errada derruba o Worker (500) e o Discord só diz que a URL "não pôde ser verificada".
+  if (!PUBLIC_KEY_PATTERN.test(publicKey)) {
+    console.error("DISCORD_PUBLIC_KEY ausente ou inválida: use a Public Key do app (64 caracteres hexadecimais).");
+    return false;
+  }
+
   const signature = request.headers.get("X-Signature-Ed25519");
   const timestamp = request.headers.get("X-Signature-Timestamp");
   if (!signature || !timestamp) return false;
