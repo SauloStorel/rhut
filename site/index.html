@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>rhut · Sua tela. Sua galera.</title>
+  <meta name="description" content="Transmita a tela pro seu servidor do Discord em até 1080p a 60 fps, direto no navegador. Digite /live e a galera entra na sala. Sem Nitro, sem instalar nada, código aberto.">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="assets/favicon.png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preload" href="assets/onest.woff2" as="font" type="font/woff2" crossorigin>
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://rhut.storell.dev.br/">
+  <meta property="og:title" content="rhut · Sua tela. Sua galera.">
+  <meta property="og:description" content="Digite /live no Discord e transmita a tela pro servidor em até 1080p a 60 fps, direto no navegador.">
+  <meta property="og:image" content="https://rhut.storell.dev.br/assets/og.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="main.js"></script>
+</head>
+<body>
+<!--
+THESIS: A primeira tela é uma sala do rhut de verdade (topo, palco, barra de controles), e a apresentação acontece dentro do palco. Recusa o hero genérico com grade de cards de recursos.
+OWN-WORLD: Preto puro e off-white #f4f2ec alternando por seção, símbolo orgânico branco cortado pela borda, laços cinzas vazando dos cantos, Onest pesada e apertada. Componentes são os da sala: palco com borda fina e raio 14px, barra de controles, selo "Ao vivo" com o único vermelho da página.
+STORY: Quem chega entende que /live abre uma sala no navegador, acredita que é leve, grátis e aberto, e escolhe entre adicionar o bot ou hospedar o seu.
+FIRST VIEWPORT: Topo da sala com o logo à esquerda e "na sala" à direita; palco ocupando a tela com o título "Sua tela. Sua galera. Seu momento." embaixo à esquerda e o símbolo gigante à direita; barra de controles embaixo com "Tudo começa com /live" e os dois botões de mesmo peso.
+FORM: A sala é a página, estrutura 3 da lista; seed 2df1104c. Interação assinatura: o aviso do Discord é editado conforme a rolagem, como o bot faz de verdade.
+FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+-->
+  <svg hidden>
+    <symbol id="i-symbol" viewBox="-12 0 882 860"><path d="M 426 5 C 424 5,418 5,413 6 C 376 10,338 23,318 38 C 284 64,279 108,306 144 C 327 172,364 193,418 209 C 466 223,483 229,507 241 C 584 279,654 348,691 423 C 713 466,719 504,709 540 C 692 610,622 656,553 644 C 514 638,481 619,432 576 C 387 537,366 524,311 504 C 217 470,182 446,173 409 C 164 375,182 346,234 305 C 263 283,273 273,283 259 C 308 223,301 173,270 158 C 242 143,210 160,201 194 C 201 197,199 208,198 218 C 194 270,182 288,122 329 C 59 372,27 405,12 442 C -11 498,19 560,85 593 C 116 608,145 616,204 622 C 267 629,293 635,324 650 C 358 667,384 689,419 731 C 449 767,464 783,481 797 C 564 864,670 860,762 787 C 774 777,804 748,813 736 C 840 703,857 667,864 631 C 866 618,866 587,864 574 C 855 529,835 491,787 433 C 779 423,771 413,769 411 C 767 408,760 400,753 392 C 694 322,674 286,650 207 C 625 127,604 87,567 51 C 541 27,516 13,483 7 C 473 5,437 3,426 5"/></symbol>
+    <symbol id="i-lockup" viewBox="-4 0 959 294"><path d="M 137 6 C 112 11,103 20,104 37 C 106 51,118 61,150 72 C 191 87,219 107,235 131 C 255 160,256 187,238 206 C 218 226,189 224,158 200 C 137 184,134 182,129 179 C 125 178,118 175,113 173 C 74 159,63 150,63 136 C 63 126,68 117,82 107 C 102 92,109 80,105 67 C 102 56,95 51,86 52 C 76 53,72 59,71 76 C 70 94,65 101,47 112 C 6 137,-6 162,12 186 C 23 200,40 208,71 212 C 96 216,103 218,118 225 C 127 230,132 234,153 257 C 191 298,238 301,274 264 C 312 226,309 183,265 134 C 248 116,235 95,228 74 C 215 39,192 11,169 6 C 162 4,146 4,137 6 M 490 139 L 490 254 509 254 L 529 254 529 206 C 529 159,530 157,532 152 C 548 113,608 119,616 160 C 617 163,617 184,617 210 L 617 254 637 254 L 656 254 656 208 C 656 151,655 144,645 127 C 625 89,569 75,534 98 C 532 100,530 101,529 101 C 529 101,529 84,529 63 L 529 24 510 24 L 490 24 490 139 M 863 119 C 863 196,863 199,868 212 C 879 240,903 255,940 255 L 951 255 951 236 L 951 217 938 216 C 915 215,906 207,903 187 C 902 179,902 139,903 132 L 903 127 927 127 L 951 127 951 108 L 951 89 927 89 L 903 89 902 68 L 902 48 882 48 L 863 48 863 119 M 425 91 C 392 98,370 122,366 156 C 365 160,365 185,365 209 L 365 254 385 254 L 404 254 404 211 C 404 154,405 149,417 138 C 426 129,434 127,454 127 L 467 127 467 108 L 467 90 449 89 C 437 89,429 90,425 91 M 677 142 C 678 202,677 200,686 216 C 705 254,755 269,795 249 C 814 239,829 221,835 200 C 837 193,837 190,838 141 L 838 89 819 89 L 799 89 799 138 C 798 192,799 190,791 201 C 784 212,773 217,757 217 C 747 217,746 217,740 214 C 728 209,720 199,717 186 C 716 183,716 165,716 135 L 716 89 696 89 L 677 89 677 142"/></symbol>
+    <symbol id="i-loops" viewBox="0 0 1672 941" preserveAspectRatio="none"><path d="M 171 1 C 170 1,170 5,169 8 C 165 29,178 52,202 68 C 213 75,220 79,244 90 C 321 124,367 163,393 217 C 418 268,414 311,381 344 C 361 364,340 372,313 372 C 282 373,258 362,223 330 C 192 304,174 292,134 274 C 73 247,56 220,76 186 C 83 175,101 159,126 142 C 156 121,169 103,168 80 C 166 47,130 33,107 57 C 99 65,95 75,93 94 C 89 128,81 139,37 168 C 24 177,10 187,6 190 L 0 195 0 260 L 1 325 13 331 C 27 338,47 344,71 350 C 139 366,165 381,211 434 C 229 454,240 464,253 474 C 313 519,385 512,442 454 C 491 404,504 333,477 272 C 469 253,462 244,441 215 C 406 168,396 148,380 93 C 369 53,355 25,338 5 L 334 -0 252 -0 C 208 -0,171 0,171 1 M 1546 366 C 1497 374,1464 410,1472 448 C 1477 472,1497 493,1527 508 C 1541 515,1552 518,1581 526 C 1623 537,1635 541,1659 551 C 1665 554,1670 556,1671 557 C 1672 557,1672 541,1672 477 L 1672 397 1666 394 C 1647 382,1619 372,1596 368 C 1585 366,1555 365,1546 366 M 1420 493 C 1406 497,1393 508,1387 521 C 1381 534,1380 539,1379 566 C 1378 594,1377 600,1370 615 C 1359 636,1350 646,1305 677 C 1265 706,1243 725,1230 745 C 1182 816,1217 882,1320 912 C 1340 918,1361 922,1403 926 C 1439 930,1461 933,1479 938 L 1494 941 1583 941 L 1672 941 1672 926 L 1672 911 1661 903 C 1655 898,1646 890,1641 885 C 1607 857,1579 844,1504 825 C 1442 809,1406 792,1382 768 C 1361 746,1357 723,1371 697 C 1381 679,1390 669,1423 640 C 1454 613,1464 603,1474 587 C 1491 559,1489 527,1468 505 C 1455 493,1437 488,1420 493"/></symbol>
+    <symbol id="i-discord" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z"/></symbol>
+    <symbol id="i-github" viewBox="0 0 24 24"><path fill="currentColor" stroke="none" d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9.5h3l4.5-4v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
+    <symbol id="i-ambient" viewBox="0 0 24 24"><rect x="6" y="7.5" width="12" height="9" rx="1.5"/><path d="M3 5.5v13M21 5.5v13M8 3.5h8M8 20.5h8"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2.5"/><path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  </svg>
+
+  <header class="topbar">
+    <a class="brand" href="#topo" aria-label="rhut, voltar ao início">
+      <svg class="lockup" aria-hidden="true"><use href="#i-lockup"/></svg>
+    </a>
+    <nav class="nav" aria-label="Seções">
+      <a href="#como-funciona">Como funciona</a>
+      <a href="#recursos">Recursos</a>
+      <a href="#comecar">Começar</a>
+    </nav>
+    <div class="presence" aria-hidden="true">
+      <span class="avatars"><span>B</span><span>L</span><span>T</span><span>R</span></span>
+      <span class="presence-count">4 na sala</span>
+    </div>
+  </header>
+
+  <main id="topo">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="stage">
+        <svg class="loops" aria-hidden="true"><use href="#i-loops"/></svg>
+        <svg class="hero-symbol" aria-hidden="true"><use href="#i-symbol"/></svg>
+
+        <p class="live-badge" aria-hidden="true">
+          <span class="live-dot"></span><span class="live-label">Ao vivo</span>
+          <span class="live-sep">1080p · 60 fps</span>
+        </p>
+
+        <div class="hero-copy">
+          <h1 class="hero-title" id="hero-title">Sua tela.<br>Sua galera.<br>Seu momento.</h1>
+          <p class="hero-lead">Digite <code>/live</code> no Discord e transmita a tela pro servidor em até 1080p a 60 fps, direto no navegador. Sem Nitro, sem instalar nada.</p>
+        </div>
+
+        <div class="stage-controls" aria-hidden="true">
+          <span class="ctl"><svg class="icon"><use href="#i-volume"/></svg></span>
+          <span class="ctl-end">
+            <span class="ctl"><svg class="icon"><use href="#i-ambient"/></svg></span>
+            <span class="ctl"><svg class="icon"><use href="#i-expand"/></svg></span>
+          </span>
+        </div>
+      </div>
+
+      <div class="dock">
+        <p class="dock-status">Tudo começa com <strong>/live</strong></p>
+        <div class="dock-actions">
+          <a class="button button-outline" href="https://github.com/SauloStorel/rhut">
+            <svg class="icon"><use href="#i-github"/></svg>Hospedar o seu
+          </a>
+          <a class="button button-solid" href="https://discord.com/oauth2/authorize?client_id=1557831498776842311&amp;scope=bot+applications.commands&amp;permissions=19456">
+            <svg class="icon"><use href="#i-discord"/></svg>Adicionar ao Discord
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="flow paper" id="como-funciona" aria-labelledby="flow-title">
+      <div class="flow-inner">
+        <div class="flow-steps">
+          <h2 class="section-title" id="flow-title">Do Discord para a sua sala.</h2>
+          <article class="step" data-step="open">
+            <h3>Alguém digita /live</h3>
+            <p>O bot posta um aviso no canal com a sala pronta. Ninguém precisa instalar nada nem criar conta.</p>
+          </article>
+          <article class="step" data-step="join">
+            <h3>A galera clica em Entrar na sala</h3>
+            <p>Cada pessoa recebe um link só dela. É assim que a sala mostra o nome e a foto do Discord de quem está lá, sem tela de login.</p>
+          </article>
+          <article class="step" data-step="live">
+            <h3>Alguém compartilha a tela</h3>
+            <p>O aviso vira Ao vivo e mostra quem está transmitindo. O vídeo vai direto de um navegador pro outro, com atraso baixo.</p>
+          </article>
+          <article class="step" data-step="closed">
+            <h3>Acabou, a sala fecha</h3>
+            <p>Pelo botão Fechar sala, ou sozinha depois de 15 minutos vazia. O aviso guarda o horário e o pico de gente assistindo.</p>
+          </article>
+        </div>
+
+        <figure class="discord-wrap">
+          <div class="discord" id="discord" data-state="open">
+            <div class="dc-msg">
+              <span class="dc-avatar"><svg aria-hidden="true"><use href="#i-symbol"/></svg></span>
+              <div class="dc-body">
+                <p class="dc-head"><strong>rhut</strong><span class="dc-tag">APP</span><span class="dc-time">Hoje às 21:04</span><span class="dc-edited" data-for="join live closed" hidden>(editado)</span></p>
+                <div class="dc-embed" data-color="open" data-for="open join">
+                  <p class="dc-author"><span class="dc-server">SG</span>Sua galera</p>
+                  <p class="dc-title">Sala aberta</p>
+                  <p class="dc-desc"><span class="dc-mention">@Bia</span> abriu uma sala. Clique em <b>Entrar na sala</b>. Quem for transmitir clica em <b>Compartilhar tela</b> lá dentro.</p>
+                </div>
+                <div class="dc-embed" data-color="live" data-for="live" hidden>
+                  <p class="dc-author"><span class="dc-server">SG</span>Sua galera</p>
+                  <div class="dc-split">
+                    <div>
+                      <p class="dc-title">Ao vivo agora</p>
+                      <p class="dc-desc"><b>Bia</b> está transmitindo desde <span class="dc-stamp">há 2 minutos</span>.</p>
+                    </div>
+                    <span class="dc-thumb">B</span>
+                  </div>
+                </div>
+                <div class="dc-embed" data-color="closed" data-for="closed" hidden>
+                  <p class="dc-author"><span class="dc-server">SG</span>Sua galera</p>
+                  <p class="dc-title">Sala encerrada</p>
+                  <p class="dc-desc">Ficou aberta das <span class="dc-stamp">21:04</span> às <span class="dc-stamp">23:17</span> · pico de 5 pessoas assistindo.</p>
+                </div>
+                <div class="dc-buttons" data-for="open join live">
+                  <span class="dc-btn dc-primary">Entrar na sala</span>
+                  <span class="dc-btn dc-danger">Fechar sala</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="dc-msg dc-ephemeral" data-for="join" hidden>
+              <span class="dc-avatar"><svg aria-hidden="true"><use href="#i-symbol"/></svg></span>
+              <div class="dc-body">
+                <p class="dc-head"><strong>rhut</strong><span class="dc-tag">APP</span><span class="dc-time">Hoje às 21:05</span></p>
+                <p class="dc-text">Seu link pessoal para a sala. Ele mostra seu nome e avatar para quem estiver lá, então não repasse.</p>
+                <div class="dc-buttons"><span class="dc-btn dc-link">Abrir transmissão</span></div>
+                <p class="dc-only">Só você pode ver esta mensagem</p>
+              </div>
+            </div>
+          </div>
+          <figcaption>Interface ilustrativa. Os textos são os mesmos que o bot manda.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="features" id="recursos" aria-labelledby="features-title">
+      <div class="features-head">
+        <h2 class="section-title" id="features-title">Feito pra assistir junto.</h2>
+        <p class="section-lead">Tudo o que a sala faz cabe numa aba do navegador. Quem assiste não precisa de nada além do link.</p>
+      </div>
+
+      <figure class="live-demo">
+        <div class="demo-stage">
+          <img src="assets/slide.webp" alt="" width="1600" height="900" loading="lazy" decoding="async">
+          <p class="live-badge">
+            <span class="live-dot"></span><span class="live-label">Ao vivo</span>
+            <span class="live-sep"><span class="mini-avatar">B</span>Bia</span>
+            <span class="live-sep">1080p · 60 fps · ~38 ms</span>
+          </p>
+          <span class="facecam" aria-hidden="true">B</span>
+          <div class="demo-controls" aria-hidden="true">
+            <span class="ctl"><svg class="icon"><use href="#i-volume"/></svg></span>
+            <span class="demo-slider"><span></span></span>
+            <span class="demo-volume">200%</span>
+          </div>
+        </div>
+        <div class="demo-cams" aria-hidden="true">
+          <span class="cam">L<em>Léo</em></span>
+          <span class="cam">T<em>Tati</em></span>
+          <span class="cam">R<em>Rafa</em></span>
+        </div>
+        <figcaption>Interface ilustrativa. Pessoas e transmissão de exemplo.</figcaption>
+      </figure>
+
+      <ul class="feature-list">
+        <li>
+          <h3>Até 1080p a 60 fps</h3>
+          <p>Quatro qualidades, trocáveis no meio da live sem derrubar ninguém.</p>
+        </li>
+        <li>
+          <h3>Câmera pra todo mundo</h3>
+          <p>Quem transmite aparece numa bolinha sobre a tela. A galera fica na faixa de baixo.</p>
+        </li>
+        <li>
+          <h3>Nome e foto do Discord</h3>
+          <p>Cada pessoa aparece como no servidor, com aviso de quem entrou e de quem começou a transmitir.</p>
+        </li>
+        <li>
+          <h3>Números de verdade</h3>
+          <p>Resolução, FPS, codec e atraso medidos ao vivo, com aviso quando a CPU ou o upload chegam no limite.</p>
+        </li>
+        <li>
+          <h3>Som até 200%</h3>
+          <p>Volume próprio na sala, independente do Discord, em estéreo a 128 kbps.</p>
+        </li>
+        <li>
+          <h3>A cara do seu servidor</h3>
+          <p>Nome, ícone e cor de destaque tirada do ícone do servidor, na sala e no aviso.</p>
+        </li>
+      </ul>
+
+      <div class="split">
+        <div class="split-copy">
+          <h2 class="section-title">Só o som do jogo.</h2>
+          <p class="section-lead">Compartilhando a janela do jogo, vai só o áudio dela. As vozes da chamada ficam de fora e ninguém escuta eco. Antes de abrir a escolha do navegador, a sala mostra o caminho.</p>
+          <p class="note">Funciona no Chrome e no Edge 141 ou mais novos.</p>
+        </div>
+        <figure class="shot">
+          <img src="assets/guia.webp" alt="Tela da sala explicando como compartilhar só a janela do jogo com o áudio ligado" width="1600" height="841" loading="lazy" decoding="async">
+          <figcaption>Captura real da sala.</figcaption>
+        </figure>
+      </div>
+
+      <div class="split split-reverse">
+        <div class="split-copy">
+          <h2 class="section-title">A qualidade que o seu upload aguenta.</h2>
+          <p class="section-lead">Como o vídeo vai direto pra cada pessoa, a qualidade é escolhida por quem transmite. Dá pra trocar no meio da live, e a sala avisa quando está pesado demais.</p>
+        </div>
+        <ul class="quality" aria-label="Qualidades disponíveis">
+          <li>
+            <span class="q-name">720p · 30 fps</span>
+            <span class="q-detail">Leve, para upload mais fraco · <span class="q-rate">~2,5 Mbps</span></span>
+          </li>
+          <li aria-current="true">
+            <span class="q-name">1080p · 30 fps</span>
+            <span class="q-detail">Equilíbrio entre nitidez e fluidez · <span class="q-rate">~4,5 Mbps</span></span>
+            <svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>
+          </li>
+          <li>
+            <span class="q-name">1080p · 60 fps</span>
+            <span class="q-detail">Jogos e movimento rápido · <span class="q-rate">~8 Mbps</span></span>
+          </li>
+          <li>
+            <span class="q-name">Texto nítido</span>
+            <span class="q-detail">Código e slides na resolução do monitor · <span class="q-rate">~3 Mbps</span></span>
+          </li>
+          <li class="q-foot">Valores por pessoa assistindo.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="command paper" aria-labelledby="command-title">
+      <svg class="loops loops-paper" aria-hidden="true"><use href="#i-loops"/></svg>
+      <h2 class="command-title" id="command-title">/live</h2>
+      <p class="command-lead">Um comando. A galera reunida.</p>
+    </section>
+
+    <section class="start" id="comecar" aria-labelledby="start-title">
+      <h2 class="section-title" id="start-title">Tem lugar pra sua galera.</h2>
+      <div class="paths">
+        <div class="path">
+          <svg class="path-icon" aria-hidden="true"><use href="#i-discord"/></svg>
+          <h3>Adicione ao seu servidor</h3>
+          <p>Use o rhut que já está no ar. Convide o bot, digite <code>/live</code> em qualquer canal e pronto.</p>
+          <a class="button button-solid" href="https://discord.com/oauth2/authorize?client_id=1557831498776842311&amp;scope=bot+applications.commands&amp;permissions=19456">
+            <svg class="icon"><use href="#i-discord"/></svg>Adicionar ao Discord
+          </a>
+          <p class="note">O bot pede só para ver o canal, enviar mensagens e inserir links.</p>
+        </div>
+        <div class="path">
+          <svg class="path-icon" aria-hidden="true"><use href="#i-github"/></svg>
+          <h3>Hospede o seu</h3>
+          <p>Código aberto, licença MIT. Roda inteiro no plano gratuito da Cloudflare, com o seu próprio bot.</p>
+          <div class="code">
+            <pre><code>git clone https://github.com/SauloStorel/rhut.git
+cd rhut &amp;&amp; npm install
+npx wrangler deploy</code></pre>
+            <button class="copy" type="button" data-copy aria-label="Copiar comandos">
+              <svg class="icon" aria-hidden="true"><use href="#i-copy"/></svg><span>Copiar</span>
+            </button>
+          </div>
+          <a class="button button-outline" href="https://github.com/SauloStorel/rhut#instalação">
+            Guia de instalação<svg class="icon"><use href="#i-arrow"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <div class="limits">
+        <h2 class="limits-title">Feito pra galera pequena.</h2>
+        <dl class="limits-list">
+          <div><dt>Até 4 ou 5 pessoas assistindo</dt><dd>Quem transmite manda uma cópia pra cada pessoa, então o upload define o tamanho da sala.</dd></div>
+          <div><dt>Uma transmissão por sala</dt><dd>Pra outra pessoa transmitir, a primeira para antes ou alguém abre outra sala.</dd></div>
+          <div><dt>Celular só assiste</dt><dd>Compartilhar a tela precisa de um computador com Chrome ou Edge.</dd></div>
+          <div><dt>Em português</dt><dd>A sala e o bot falam só português por enquanto.</dd></div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="closing paper" aria-labelledby="closing-title">
+      <svg class="closing-symbol" aria-hidden="true"><use href="#i-symbol"/></svg>
+      <div class="closing-copy">
+        <h2 class="closing-title" id="closing-title">A sala tá aberta.</h2>
+        <p class="closing-lead">Só falta você.</p>
+        <div class="closing-actions">
+          <a class="button button-ink" href="https://discord.com/oauth2/authorize?client_id=1557831498776842311&amp;scope=bot+applications.commands&amp;permissions=19456">
+            <svg class="icon"><use href="#i-discord"/></svg>Adicionar ao Discord
+          </a>
+          <a class="button button-ink-outline" href="https://github.com/SauloStorel/rhut">
+            <svg class="icon"><use href="#i-github"/></svg>Ver no GitHub
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <svg class="lockup" aria-hidden="true"><use href="#i-lockup"/></svg>
+    <p>Código aberto sob licença MIT. Feito por <a href="https://storell.dev.br">Saulo Storel</a>.</p>
+    <a href="https://github.com/SauloStorel/rhut">GitHub</a>
+  </footer>
+</body>
+</html>

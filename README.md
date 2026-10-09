@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/banner.png" alt="rhut"></p>
 
-**rhut** é transmissão de tela para o seu servidor do Discord, direto no navegador.
+**rhut** é transmissão de tela para o seu servidor do Discord, direto no navegador. Site: <https://rhut.storell.dev.br>
 
 Alguém digita `/live`, o bot posta um aviso no canal e todo mundo entra numa sala na web. Quem transmite compartilha a janela do jogo com o som dela, e o resto assiste com atraso baixo, em até 1080p a 60 fps. O vídeo vai direto de um navegador para o outro (WebRTC), sem passar por servidor, e tudo roda no plano gratuito da Cloudflare.
 
