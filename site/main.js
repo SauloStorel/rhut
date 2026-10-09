@@ -1,3 +1,4 @@
+import { scrollWithoutHash } from "./js/anchors.js";
 import { setupCopyButtons } from "./js/copy.js";
 import { kinetic } from "./js/kinetic.js";
 import { magnetic } from "./js/magnetic.js";
@@ -6,9 +7,10 @@ import { parallax } from "./js/parallax.js";
 import { playArrivals } from "./js/presence.js";
 import { tilt } from "./js/tilt.js";
 
-// O que funciona para todo mundo: controles da mini sala e copiar comandos.
+// O que funciona para todo mundo: controles da mini sala, copiar comandos e links do menu.
 setupMiniRoom(document.querySelector("#mini-room"));
 setupCopyButtons();
+scrollWithoutHash();
 
 // Movimento é extra: some para quem pediu menos movimento, e o que segue o mouse só vale com mouse.
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
