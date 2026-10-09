@@ -1,0 +1,33 @@
+name: Bug
+description: Algo não funciona como deveria
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: O que aconteceu
+      description: O que você fez, o que esperava e o que aconteceu de fato.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Como reproduzir
+      placeholder: |
+        1. Digitei /live
+        2. Cliquei em Compartilhar tela
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Navegador e sistema
+      placeholder: Chrome 141 no Windows 11
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Prints ou logs
+      description: Se tiver, cole aqui. Não cole tokens nem segredos.

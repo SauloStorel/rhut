@@ -147,6 +147,8 @@ Antes de mandar alterações, rode `npm run typecheck`.
 
 Issues e pull requests são bem-vindos. O projeto não usa framework nem etapa de build no front: é HTML, CSS e módulos JavaScript servidos como estão, então dá para mexer sem instalar nada além do Wrangler.
 
+Veja o [guia de contribuição](CONTRIBUTING.md) para o passo a passo. Para relatar uma falha de segurança, siga a [política de segurança](SECURITY.md).
+
 ## Licença
 
 [MIT](LICENSE)
