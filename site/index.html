@@ -36,6 +36,12 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9.5h3l4.5-4v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></symbol>
     <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></symbol>
     <symbol id="i-ambient" viewBox="0 0 24 24"><rect x="6" y="7.5" width="12" height="9" rx="1.5"/><path d="M3 5.5v13M21 5.5v13M8 3.5h8M8 20.5h8"/></symbol>
+    <symbol id="i-muted" viewBox="0 0 24 24"><path d="M4 9.5h3l4.5-4v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></symbol>
+    <symbol id="i-shrink" viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><rect x="3" y="6.5" width="12.5" height="11" rx="2.5"/><path d="M15.5 10.5l5-3v9l-5-3"/></symbol>
+    <symbol id="i-camera-off" viewBox="0 0 24 24"><path d="M15.5 13.5l5 3v-9l-5 3M15.5 15v.5a2 2 0 0 1-2 2H5.5a2.5 2.5 0 0 1-2.5-2.5V9a2.5 2.5 0 0 1 2.5-2.5H7M11 6.5h2.5a2 2 0 0 1 2 2V11M3 3l18 18"/></symbol>
+    <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4.5 16a8 8 0 1 1 15 0"/><path d="M12 13l3.5-4"/></symbol>
+    <symbol id="i-updown" viewBox="0 0 24 24"><path d="M8 9.5l4-4 4 4M8 14.5l4 4 4-4"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="11" height="11" rx="2.5"/><path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
@@ -50,17 +56,17 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <a href="#recursos">Recursos</a>
       <a href="#comecar">Começar</a>
     </nav>
-    <div class="presence" aria-hidden="true">
-      <span class="avatars"><span>B</span><span>L</span><span>T</span><span>R</span></span>
-      <span class="presence-count">4 na sala</span>
+    <div class="presence" id="presence" aria-hidden="true">
+      <span class="avatars" id="avatars"><span>B</span><span>L</span><span>T</span><span>R</span></span>
+      <span class="presence-count" id="presence-count">4 na sala</span>
     </div>
   </header>
 
   <main id="topo">
     <section class="hero" aria-labelledby="hero-title">
-      <div class="stage">
-        <svg class="loops" aria-hidden="true"><use href="#i-loops"/></svg>
-        <svg class="hero-symbol" aria-hidden="true"><use href="#i-symbol"/></svg>
+      <div class="stage" id="hero-stage">
+        <div class="loops-wrap" data-depth="-0.5"><svg class="loops" aria-hidden="true"><use href="#i-loops"/></svg></div>
+        <div class="hero-symbol-wrap" data-depth="1"><svg class="hero-symbol" aria-hidden="true"><use href="#i-symbol"/></svg></div>
 
         <p class="live-badge" aria-hidden="true">
           <span class="live-dot"></span><span class="live-label">Ao vivo</span>
@@ -103,7 +109,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
         <ol class="flow-steps">
           <li class="flow-step">
-            <div class="dc-card" aria-hidden="true">
+            <div class="dc-card" data-tilt aria-hidden="true">
               <p class="dc-command"><span class="dc-mini">B</span><b>Bia</b> usou <span class="dc-slash">/live</span></p>
               <div class="dc-msg">
                 <span class="dc-avatar"><svg><use href="#i-symbol"/></svg></span>
@@ -123,7 +129,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           </li>
 
           <li class="flow-step">
-            <div class="dc-card dc-card-ephemeral" aria-hidden="true">
+            <div class="dc-card dc-card-ephemeral" data-tilt aria-hidden="true">
               <div class="dc-msg">
                 <span class="dc-avatar"><svg><use href="#i-symbol"/></svg></span>
                 <div class="dc-body">
@@ -139,7 +145,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           </li>
 
           <li class="flow-step">
-            <div class="dc-card" aria-hidden="true">
+            <div class="dc-card" data-tilt aria-hidden="true">
               <div class="dc-msg">
                 <span class="dc-avatar"><svg><use href="#i-symbol"/></svg></span>
                 <div class="dc-body">
@@ -163,7 +169,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           </li>
 
           <li class="flow-step">
-            <div class="dc-card" aria-hidden="true">
+            <div class="dc-card" data-tilt aria-hidden="true">
               <div class="dc-msg">
                 <span class="dc-avatar"><svg><use href="#i-symbol"/></svg></span>
                 <div class="dc-body">
@@ -187,31 +193,59 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 
     <section class="features" id="recursos" aria-labelledby="features-title">
       <div class="features-head">
-        <h2 class="section-title" id="features-title">Feito pra assistir junto.</h2>
-        <p class="section-lead">Tudo o que a sala faz cabe numa aba do navegador. Quem assiste não precisa de nada além do link.</p>
+        <h2 class="section-title" id="features-title">Mexe aí, a sala é sua.</h2>
+        <p class="section-lead">Troque a qualidade, suba o volume, ligue o modo ambiente ou a sua câmera. É a mesma interface que a galera usa na live, e quem assiste não precisa de nada além do link.</p>
       </div>
 
-      <figure class="live-demo">
-        <div class="demo-stage">
-          <img src="assets/slide.webp" alt="" width="1600" height="900" loading="lazy" decoding="async">
+      <figure class="mini-room" id="mini-room" data-ambient>
+        <img class="mr-ambient" src="assets/slide.webp" alt="" width="1600" height="900" loading="lazy" decoding="async">
+        <div class="mr-stage" id="mr-stage">
+          <img class="mr-screen" id="mr-screen" src="assets/slide.webp" alt="Transmissão de exemplo: um slide do rhut" width="1600" height="900" loading="lazy" decoding="async">
           <p class="live-badge">
             <span class="live-dot"></span><span class="live-label">Ao vivo</span>
             <span class="live-sep"><span class="mini-avatar">B</span>Bia</span>
-            <span class="live-sep">1080p · 60 fps · ~38 ms</span>
+            <span class="live-sep"><span id="mr-quality-label">1080p · 30 fps</span>&nbsp;·&nbsp;~<span id="mr-latency">38</span> ms</span>
           </p>
           <span class="facecam" aria-hidden="true">B</span>
-          <div class="demo-controls" aria-hidden="true">
-            <span class="ctl"><svg class="icon"><use href="#i-volume"/></svg></span>
-            <span class="demo-slider"><span></span></span>
-            <span class="demo-volume">200%</span>
+          <div class="mr-controls">
+            <div class="mr-volume">
+              <button class="mr-icon" id="mr-mute" type="button" aria-label="Silenciar"><svg class="icon"><use href="#i-volume"/></svg></button>
+              <input class="mr-slider" id="mr-slider" type="range" min="0" max="2" step="0.01" value="1" aria-label="Volume">
+              <output class="mr-volume-value" id="mr-volume-value" for="mr-slider">100%</output>
+            </div>
+            <div class="mr-controls-end">
+              <button class="mr-icon" id="mr-ambient" type="button" aria-pressed="true" aria-label="Modo ambiente" title="Modo ambiente"><svg class="icon"><use href="#i-ambient"/></svg></button>
+              <button class="mr-icon" id="mr-fullscreen" type="button" aria-label="Tela cheia"><svg class="icon"><use href="#i-expand"/></svg></button>
+            </div>
           </div>
         </div>
-        <div class="demo-cams" aria-hidden="true">
+
+        <div class="mr-cams" id="mr-cams">
           <span class="cam">L<em>Léo</em></span>
           <span class="cam">T<em>Tati</em></span>
           <span class="cam">R<em>Rafa</em></span>
         </div>
-        <figcaption>Interface ilustrativa. Pessoas e transmissão de exemplo.</figcaption>
+
+        <div class="mr-dock">
+          <p class="mr-status" id="mr-status">3 pessoas assistindo · 1080p · 30 fps H264</p>
+          <button class="mr-button" id="mr-camera" type="button" aria-pressed="false">
+            <svg class="icon"><use href="#i-camera"/></svg><span>Câmera</span>
+          </button>
+          <div class="mr-quality">
+            <button class="mr-quality-trigger" id="mr-quality-trigger" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="mr-quality-list">
+              <svg class="icon"><use href="#i-gauge"/></svg>
+              <span class="mr-quality-current"><b id="mr-quality-name">1080p · 30 fps</b><small id="mr-quality-rate">~4,5 Mbps por pessoa</small></span>
+              <svg class="icon icon-sm"><use href="#i-updown"/></svg>
+            </button>
+            <ul class="mr-quality-list" id="mr-quality-list" role="menu" aria-label="Qualidade da transmissão" hidden>
+              <li role="none"><button type="button" role="menuitemradio" aria-checked="false" data-quality="720p30"><b>720p · 30 fps</b><small>Leve, para upload mais fraco · ~2,5 Mbps</small><svg class="icon"><use href="#i-check"/></svg></button></li>
+              <li role="none"><button type="button" role="menuitemradio" aria-checked="true" data-quality="1080p30"><b>1080p · 30 fps</b><small>Equilíbrio entre nitidez e fluidez · ~4,5 Mbps</small><svg class="icon"><use href="#i-check"/></svg></button></li>
+              <li role="none"><button type="button" role="menuitemradio" aria-checked="false" data-quality="1080p60"><b>1080p · 60 fps</b><small>Jogos e movimento rápido · ~8 Mbps</small><svg class="icon"><use href="#i-check"/></svg></button></li>
+              <li role="none"><button type="button" role="menuitemradio" aria-checked="false" data-quality="text"><b>Texto nítido</b><small>Código e slides na resolução do monitor · ~3 Mbps</small><svg class="icon"><use href="#i-check"/></svg></button></li>
+            </ul>
+          </div>
+        </div>
+        <figcaption>Interface ilustrativa com pessoas de exemplo. Os controles funcionam de verdade; a câmera só liga se você permitir e não sai do seu navegador.</figcaption>
       </figure>
 
       <ul class="feature-list">
@@ -253,37 +287,11 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         </figure>
       </div>
 
-      <div class="split split-reverse">
-        <div class="split-copy">
-          <h2 class="section-title">A qualidade que o seu upload aguenta.</h2>
-          <p class="section-lead">Como o vídeo vai direto pra cada pessoa, a qualidade é escolhida por quem transmite. Dá pra trocar no meio da live, e a sala avisa quando está pesado demais.</p>
-        </div>
-        <ul class="quality" aria-label="Qualidades disponíveis">
-          <li>
-            <span class="q-name">720p · 30 fps</span>
-            <span class="q-detail">Leve, para upload mais fraco · <span class="q-rate">~2,5 Mbps</span></span>
-          </li>
-          <li aria-current="true">
-            <span class="q-name">1080p · 30 fps</span>
-            <span class="q-detail">Equilíbrio entre nitidez e fluidez · <span class="q-rate">~4,5 Mbps</span></span>
-            <svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>
-          </li>
-          <li>
-            <span class="q-name">1080p · 60 fps</span>
-            <span class="q-detail">Jogos e movimento rápido · <span class="q-rate">~8 Mbps</span></span>
-          </li>
-          <li>
-            <span class="q-name">Texto nítido</span>
-            <span class="q-detail">Código e slides na resolução do monitor · <span class="q-rate">~3 Mbps</span></span>
-          </li>
-          <li class="q-foot">Valores por pessoa assistindo.</li>
-        </ul>
-      </div>
     </section>
 
     <section class="command paper" aria-labelledby="command-title">
       <svg class="loops loops-paper" aria-hidden="true"><use href="#i-loops"/></svg>
-      <h2 class="command-title" id="command-title">/live</h2>
+      <h2 class="command-title" id="command-title" data-kinetic>/live</h2>
       <p class="command-lead">Um comando. A galera reunida.</p>
     </section>
 
@@ -344,6 +352,8 @@ npx wrangler deploy</code></pre>
       </div>
     </section>
   </main>
+
+  <ol class="toasts" id="toasts" aria-live="polite"></ol>
 
   <footer class="footer">
     <svg class="lockup" aria-hidden="true"><use href="#i-lockup"/></svg>
