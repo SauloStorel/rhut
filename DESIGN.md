@@ -15,9 +15,12 @@ Registro do mundo visual do rhut, tirado do que foi construído em `site/` e em 
 - Sem rótulo pequeno acima de título.
 - Dados de exemplo (pessoas, transmissão) sempre com legenda "Interface ilustrativa".
 - A réplica do Discord usa as cores do Discord, não as do rhut, incluindo a barra colorida do embed.
-- Um momento de movimento por tela: a sala "liga" no carregamento; o aviso do Discord é editado conforme a rolagem.
+- Movimento a serviço do produto: a sala "liga" no carregamento, a galera entra com os avisos do app, o símbolo do topo segue o mouse, seções aparecem presas à rolagem (rápido, sem atrasar a leitura), cartões do Discord inclinam, as letras do "/live" mudam de peso perto do cursor e os botões principais são magnéticos.
+- A mini sala em Recursos é interativa de verdade: qualidade, volume até 200%, modo ambiente, tela cheia e câmera (só no navegador de quem clicou).
+- Nada depende de animação para ser lido. Com "menos movimento" ligado, tudo fica parado; efeitos de mouse só existem com mouse.
 
 ## Arquivos
 
 - `site/index.html`, `site/styles.css`, `site/main.js`: site de divulgação.
+- `site/js/`: um módulo por interação (mini sala, presença, parallax, inclinação, letras cinéticas, botões magnéticos, copiar, avisos).
 - `site/assets/`: fonte, imagens; símbolo, logotipo e laços estão inline no `index.html` como `<symbol>`, vetorizados do material original.
