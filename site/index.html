@@ -98,66 +98,90 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
       <div class="flow-inner">
         <div class="flow-steps">
           <h2 class="section-title" id="flow-title">Do Discord para a sua sala.</h2>
-          <article class="step" data-step="open">
-            <h3>Alguém digita /live</h3>
-            <p>O bot posta um aviso no canal com a sala pronta. Ninguém precisa instalar nada nem criar conta.</p>
-          </article>
-          <article class="step" data-step="join">
-            <h3>A galera clica em Entrar na sala</h3>
-            <p>Cada pessoa recebe um link só dela. É assim que a sala mostra o nome e a foto do Discord de quem está lá, sem tela de login.</p>
-          </article>
-          <article class="step" data-step="live">
-            <h3>Alguém compartilha a tela</h3>
-            <p>O aviso vira Ao vivo e mostra quem está transmitindo. O vídeo vai direto de um navegador pro outro, com atraso baixo.</p>
-          </article>
-          <article class="step" data-step="closed">
-            <h3>Acabou, a sala fecha</h3>
-            <p>Pelo botão Fechar sala, ou sozinha depois de 15 minutos vazia. O aviso guarda o horário e o pico de gente assistindo.</p>
-          </article>
+          <p class="section-lead">Tudo acontece no canal onde a galera já está. O bot posta um aviso e vai atualizando ele sozinho.</p>
+          <div class="steps" role="tablist" aria-label="Etapas de uma sala">
+            <button class="step" type="button" role="tab" id="step-open" data-step="open" aria-controls="discord" aria-selected="true">
+              <span class="step-progress"><span></span></span>
+              <span class="step-title">Alguém digita /live</span>
+              <span class="step-text"><span>O bot posta um aviso no canal com a sala pronta. Ninguém precisa instalar nada nem criar conta.</span></span>
+            </button>
+            <button class="step" type="button" role="tab" id="step-join" data-step="join" aria-controls="discord" aria-selected="false" tabindex="-1">
+              <span class="step-progress"><span></span></span>
+              <span class="step-title">A galera clica em Entrar na sala</span>
+              <span class="step-text"><span>Cada pessoa recebe um link só dela. É assim que a sala mostra o nome e a foto do Discord de quem está lá.</span></span>
+            </button>
+            <button class="step" type="button" role="tab" id="step-live" data-step="live" aria-controls="discord" aria-selected="false" tabindex="-1">
+              <span class="step-progress"><span></span></span>
+              <span class="step-title">Alguém compartilha a tela</span>
+              <span class="step-text"><span>O aviso vira Ao vivo e mostra quem está transmitindo. O vídeo vai direto de um navegador pro outro.</span></span>
+            </button>
+            <button class="step" type="button" role="tab" id="step-closed" data-step="closed" aria-controls="discord" aria-selected="false" tabindex="-1">
+              <span class="step-progress"><span></span></span>
+              <span class="step-title">Acabou, a sala fecha</span>
+              <span class="step-text"><span>Pelo botão Fechar sala, ou sozinha depois de 15 minutos vazia. O aviso guarda o horário e o pico de gente.</span></span>
+            </button>
+          </div>
         </div>
 
         <figure class="discord-wrap">
-          <div class="discord" id="discord" data-state="open">
-            <div class="dc-msg">
-              <span class="dc-avatar"><svg aria-hidden="true"><use href="#i-symbol"/></svg></span>
-              <div class="dc-body">
-                <p class="dc-head"><strong>rhut</strong><span class="dc-tag">APP</span><span class="dc-time">Hoje às 21:04</span><span class="dc-edited" data-for="join live closed" hidden>(editado)</span></p>
-                <div class="dc-embed" data-color="open" data-for="open join">
-                  <p class="dc-author"><span class="dc-server">SG</span>Sua galera</p>
-                  <p class="dc-title">Sala aberta</p>
-                  <p class="dc-desc"><span class="dc-mention">@Bia</span> abriu uma sala. Clique em <b>Entrar na sala</b>. Quem for transmitir clica em <b>Compartilhar tela</b> lá dentro.</p>
+          <div class="discord" id="discord" role="tabpanel" aria-labelledby="step-open" data-state="open">
+            <p class="dc-channel" aria-hidden="true"><span class="dc-hash">#</span>geral</p>
+
+            <div class="dc-messages">
+              <div class="dc-msg">
+                <span class="dc-avatar dc-avatar-user">L</span>
+                <div class="dc-body">
+                  <p class="dc-head"><strong>Léo</strong><span class="dc-time">Hoje às 21:03</span></p>
+                  <p class="dc-text">bora ver a run da Bia?</p>
                 </div>
-                <div class="dc-embed" data-color="live" data-for="live" hidden>
-                  <p class="dc-author"><span class="dc-server">SG</span>Sua galera</p>
-                  <div class="dc-split">
-                    <div>
-                      <p class="dc-title">Ao vivo agora</p>
-                      <p class="dc-desc"><b>Bia</b> está transmitindo desde <span class="dc-stamp">há 2 minutos</span>.</p>
+              </div>
+
+              <div class="dc-msg">
+                <span class="dc-avatar"><svg aria-hidden="true"><use href="#i-symbol"/></svg></span>
+                <div class="dc-body">
+                  <p class="dc-head"><strong>rhut</strong><span class="dc-tag">APP</span><span class="dc-time">Hoje às 21:04</span><span class="dc-edited" data-for="join live closed" hidden>(editado)</span></p>
+                  <div class="dc-embed" data-color="open" data-for="open join">
+                    <p class="dc-author"><span class="dc-server">SG</span>Sua galera</p>
+                    <p class="dc-title">Sala aberta</p>
+                    <p class="dc-desc"><span class="dc-mention">@Bia</span> abriu uma sala. Clique em <b>Entrar na sala</b>. Quem for transmitir clica em <b>Compartilhar tela</b> lá dentro.</p>
+                  </div>
+                  <div class="dc-embed" data-color="live" data-for="live" hidden>
+                    <p class="dc-author"><span class="dc-server">SG</span>Sua galera</p>
+                    <div class="dc-split">
+                      <div>
+                        <p class="dc-title">Ao vivo agora</p>
+                        <p class="dc-desc"><b>Bia</b> está transmitindo desde <span class="dc-stamp">há 2 minutos</span>.</p>
+                      </div>
+                      <span class="dc-thumb">B</span>
                     </div>
-                    <span class="dc-thumb">B</span>
+                  </div>
+                  <div class="dc-embed" data-color="closed" data-for="closed" hidden>
+                    <p class="dc-author"><span class="dc-server">SG</span>Sua galera</p>
+                    <p class="dc-title">Sala encerrada</p>
+                    <p class="dc-desc">Ficou aberta das <span class="dc-stamp">21:04</span> às <span class="dc-stamp">23:17</span> · pico de 5 pessoas assistindo.</p>
+                  </div>
+                  <div class="dc-buttons" data-for="open join live">
+                    <span class="dc-btn dc-primary" data-press="join">Entrar na sala</span>
+                    <span class="dc-btn dc-danger">Fechar sala</span>
                   </div>
                 </div>
-                <div class="dc-embed" data-color="closed" data-for="closed" hidden>
-                  <p class="dc-author"><span class="dc-server">SG</span>Sua galera</p>
-                  <p class="dc-title">Sala encerrada</p>
-                  <p class="dc-desc">Ficou aberta das <span class="dc-stamp">21:04</span> às <span class="dc-stamp">23:17</span> · pico de 5 pessoas assistindo.</p>
-                </div>
-                <div class="dc-buttons" data-for="open join live">
-                  <span class="dc-btn dc-primary">Entrar na sala</span>
-                  <span class="dc-btn dc-danger">Fechar sala</span>
+              </div>
+
+              <div class="dc-msg dc-ephemeral" data-for="join" hidden>
+                <span class="dc-avatar"><svg aria-hidden="true"><use href="#i-symbol"/></svg></span>
+                <div class="dc-body">
+                  <p class="dc-head"><strong>rhut</strong><span class="dc-tag">APP</span><span class="dc-time">Hoje às 21:05</span></p>
+                  <p class="dc-text">Seu link pessoal para a sala. Ele mostra seu nome e avatar para quem estiver lá, então não repasse.</p>
+                  <div class="dc-buttons"><span class="dc-btn dc-link">Abrir transmissão</span></div>
+                  <p class="dc-only">Só você pode ver esta mensagem</p>
                 </div>
               </div>
             </div>
 
-            <div class="dc-msg dc-ephemeral" data-for="join" hidden>
-              <span class="dc-avatar"><svg aria-hidden="true"><use href="#i-symbol"/></svg></span>
-              <div class="dc-body">
-                <p class="dc-head"><strong>rhut</strong><span class="dc-tag">APP</span><span class="dc-time">Hoje às 21:05</span></p>
-                <p class="dc-text">Seu link pessoal para a sala. Ele mostra seu nome e avatar para quem estiver lá, então não repasse.</p>
-                <div class="dc-buttons"><span class="dc-btn dc-link">Abrir transmissão</span></div>
-                <p class="dc-only">Só você pode ver esta mensagem</p>
-              </div>
-            </div>
+            <p class="dc-composer" aria-hidden="true">
+              <span class="dc-typed" data-for="open">/live</span>
+              <span class="dc-placeholder" data-for="join live closed" hidden>Conversar em #geral</span>
+            </p>
           </div>
           <figcaption>Interface ilustrativa. Os textos são os mesmos que o bot manda.</figcaption>
         </figure>

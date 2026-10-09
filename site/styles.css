@@ -308,46 +308,87 @@ img { display: block; max-width: 100%; height: auto; }
 
 .flow-inner {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  align-items: center;
   gap: clamp(40px, 6vw, 96px);
   max-width: 1240px;
   margin: 0 auto;
 }
 
-.flow-steps { display: grid; gap: 0; }
+.steps { display: grid; margin-top: 44px; }
 
 .step {
-  min-height: 46vh;
-  padding: 32px 0 0;
-  border-top: 1px solid var(--paper-line);
-  opacity: 0.45;
-  transition: opacity 400ms var(--ease-out);
+  display: grid;
+  gap: 6px;
+  padding: 20px 0 22px;
+  border: 0;
+  background: none;
+  color: var(--paper-muted);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }
 
-.flow-steps .section-title { margin-bottom: 56px; }
-
-.step:last-child { min-height: 30vh; }
-
-.step[data-active] { opacity: 1; }
-
-.step h3 { font-size: 1.6rem; font-weight: 700; letter-spacing: -0.025em; }
-
-.step p { max-width: 42ch; margin-top: 10px; color: var(--paper-muted); font-size: 1.08rem; }
-
-.discord-wrap {
-  position: sticky;
-  top: calc(50vh - 190px);
-  align-self: start;
-  margin: 0;
+/* A linha de cima de cada etapa é também a barra de progresso dela. */
+.step-progress {
+  position: relative;
+  height: 2px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--paper-line);
 }
+
+.step-progress span {
+  position: absolute;
+  inset: 0;
+  background: var(--ink);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.step[aria-selected="true"] .step-progress span { transform: scaleX(1); }
+
+.flow[data-playing] .step[aria-selected="true"] .step-progress span {
+  animation: step-fill var(--step-ms) linear both;
+}
+
+.flow[data-paused] .step-progress span { animation-play-state: paused; }
+
+.step-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  transition: color 200ms;
+}
+
+.step-text {
+  display: grid;
+  grid-template-rows: 0fr;
+  max-width: 42ch;
+  overflow: hidden;
+  font-size: 1.05rem;
+  transition: grid-template-rows 420ms var(--ease-out), opacity 300ms;
+  opacity: 0;
+}
+
+.step:hover .step-title { color: var(--ink); }
+
+.step[aria-selected="true"] { color: var(--ink); }
+.step[aria-selected="true"] .step-text { grid-template-rows: 1fr; color: var(--paper-muted); opacity: 1; }
+
+/* Recolhe o texto animando a linha do grid de 0fr para 1fr. */
+.step-text > span { min-height: 0; overflow: hidden; }
+
+.discord-wrap { margin: 0; }
 
 .discord-wrap figcaption { margin-top: 14px; color: var(--paper-muted); font-size: 0.85rem; }
 
 /* Réplica do Discord no tema escuro: as cores são as dele, não as do rhut. */
 .discord {
   display: grid;
-  gap: 18px;
-  padding: 22px 22px 24px 16px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
   border-radius: 12px;
   background: #313338;
   box-shadow: 0 30px 60px -24px rgb(0 0 0 / 0.45), 0 2px 8px rgb(0 0 0 / 0.12);
@@ -355,6 +396,50 @@ img { display: block; max-width: 100%; height: auto; }
   font-size: 15px;
   line-height: 1.4;
 }
+
+.dc-channel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 18px;
+  border-bottom: 1px solid rgb(0 0 0 / 0.28);
+  color: #f2f3f5;
+  font-weight: 600;
+}
+
+.dc-hash { color: #80848e; font-size: 1.25em; font-weight: 400; line-height: 1; }
+
+/* Altura fixa e mensagens presas embaixo, como um chat: trocar de etapa não faz a página pular. */
+.dc-messages {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 18px;
+  min-height: 360px;
+  padding: 18px 18px 6px 14px;
+}
+
+.dc-composer {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  margin: 10px 14px 16px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: #383a40;
+  color: #f2f3f5;
+}
+
+.dc-typed {
+  overflow: hidden;
+  width: 5ch;
+  border-right: 2px solid #f2f3f5;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  white-space: nowrap;
+  animation: type 700ms steps(5) 250ms both, caret 900ms steps(1) infinite;
+}
+
+.dc-placeholder { color: #6d6f78; }
 
 .dc-msg { display: grid; grid-template-columns: 40px 1fr; gap: 14px; }
 
@@ -366,6 +451,8 @@ img { display: block; max-width: 100%; height: auto; }
   border-radius: 50%;
   background: #000;
 }
+
+.dc-avatar-user { background: #5c5f66; color: #f2f3f5; font-weight: 600; }
 
 .dc-avatar svg { width: 24px; height: 24px; fill: #f4f2ec; }
 
@@ -444,16 +531,19 @@ img { display: block; max-width: 100%; height: auto; }
   color: #fff;
   font-size: 14px;
   font-weight: 500;
+  transition: box-shadow 200ms, filter 200ms;
 }
+
+/* Na etapa de entrar, o botão aparece "clicado". */
+.discord[data-state="join"] [data-press="join"] { filter: brightness(0.85); box-shadow: 0 0 0 2px #313338, 0 0 0 4px #c9cdfb; }
 
 .dc-primary { background: #5865f2; }
 .dc-danger { background: #da373c; }
 .dc-link { background: #4e5058; }
 
 .dc-ephemeral {
-  margin: 0 -22px -24px -16px;
-  padding: 14px 22px 16px 16px;
-  border-radius: 0 0 12px 12px;
+  margin: 0 -18px 0 -14px;
+  padding: 10px 18px 10px 14px;
   background: rgb(88 101 242 / 0.08);
   animation: edit-in 420ms var(--ease-out);
 }
@@ -826,6 +916,19 @@ img { display: block; max-width: 100%; height: auto; }
 
 @keyframes blink { 50% { opacity: 0.35; } }
 
+@keyframes step-fill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes type {
+  from { width: 0; }
+}
+
+@keyframes caret {
+  50% { border-color: transparent; }
+}
+
 @keyframes edit-in {
   from { opacity: 0; transform: translateY(6px); filter: blur(3px); }
 }
@@ -841,9 +944,10 @@ img { display: block; max-width: 100%; height: auto; }
   .nav { display: none; }
   .presence { margin-left: auto; }
   .flow-inner { grid-template-columns: 1fr; }
-  .discord-wrap { position: sticky; top: 76px; z-index: 2; order: -1; }
-  .flow-steps .section-title { margin-bottom: 32px; }
-  .step { min-height: 0; padding: 24px 0 36px; opacity: 1; }
+  .flow-inner { gap: 0; }
+  .flow-steps { display: contents; }
+  .discord-wrap { margin-top: 24px; }
+  .discord-wrap { max-width: 560px; }
   .feature-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .split, .split-reverse { grid-template-columns: 1fr; }
   .split-reverse .split-copy { order: 0; }
@@ -864,7 +968,10 @@ img { display: block; max-width: 100%; height: auto; }
   .dock-status { display: none; }
   .dock-actions { flex-direction: column-reverse; }
   .dock-actions .button, .path .button, .closing-actions .button { width: 100%; }
-  .discord-wrap { position: static; }
+  .steps { margin-top: 28px; }
+  .step { padding: 14px 0 16px; }
+  .step-title { font-size: 1.15rem; }
+  .dc-messages { min-height: 0; }
   .discord { font-size: 14px; }
   .facecam { bottom: 56px; right: 12px; }
   .demo-slider, .demo-volume { display: none; }
