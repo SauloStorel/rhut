@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { type BoardName, boardOf } from "./boards";
-import type { Guild } from "./guild";
+import { type Guild, fetchProfile, voiceChannelOf } from "./guild";
 import type { Profile } from "./identity";
 
 // Uma sala = no máximo uma pessoa transmitindo a tela (host) e o resto assistindo (viewers); qualquer um pode
@@ -28,6 +28,10 @@ export type NewRoom = {
   openerName: string;
   channelId: string;
   board: BoardName;
+  // Link direto da sala para o "Entrar" (com login pelo Discord), ou null para o "Entrar" que manda o link pessoal.
+  pageUrl: string | null;
+  // Call em que a galera está: de quem abriu a sala e, depois, de quem está transmitindo.
+  voiceChannelId: string | null;
 };
 
 export type RoomInfo = NewRoom & {
@@ -35,6 +39,8 @@ export type RoomInfo = NewRoom & {
   status: RoomStatus;
   liveSince: number | null;
   host: Profile | null;
+  // Pessoas na sala (a mesma pessoa em duas abas conta uma vez), contando quem transmite.
+  people: number;
 };
 
 // Sinais WebRTC que o servidor só repassa: os da tela (offer/answer/candidate/request-offer) e os das câmeras.
@@ -45,6 +51,8 @@ const RECONNECT_GRACE_MS = 20 * 1000;
 const DELIBERATE_CLOSE_CODES = new Set([1000, 1001]);
 const RESUME_TOKEN_PATTERN = /^[0-9a-f-]{36}$/;
 const HOST_TAKEN = "Já tem alguém transmitindo nesta sala.";
+// Entradas e saídas de alguns segundos viram uma edição só no Discord, que limita quantas edições aceita.
+const PEOPLE_SYNC_DELAY_MS = 3000;
 const GHOST_PREFIX = "ghost:";
 
 // Header que o Worker preenche depois de validar o passe; nunca vem do navegador (o Worker remove).
@@ -54,6 +62,7 @@ export class Room extends DurableObject<Env> {
   // Sockets que já saíram da sala mas ainda aparecem em getWebSockets() enquanto fecham.
   private readonly departed = new WeakSet<WebSocket>();
   private boardSyncs = Promise.resolve();
+  private peopleSync: Promise<void> | null = null;
 
   private readonly onLeave: Record<Role, (peer: Peer) => unknown> = {
     host: (peer) => this.endBroadcast(peer.id),
@@ -77,7 +86,7 @@ export class Room extends DurableObject<Env> {
 
   // Chamado pelo /live ou pelo "Abrir sala" do painel. Retorna false se o bot não conseguiu mostrar a sala no Discord.
   async open(room: NewRoom) {
-    const info: RoomInfo = { ...room, messageId: "", status: "waiting", liveSince: null, host: null };
+    const info: RoomInfo = { ...room, messageId: "", status: "waiting", liveSince: null, host: null, people: 0 };
     const shown = await boardOf(info).open(info, this.env);
     if (!shown) return false;
 
@@ -169,7 +178,7 @@ export class Room extends DurableObject<Env> {
     this.setPeer(ws, { ...peer, role: "host" });
     this.sendViewers(ws);
     await this.broadcastPresence();
-    await this.transition({ status: "live", liveSince: Date.now(), host: peer.profile });
+    await this.transition({ status: "live", liveSince: Date.now(), host: peer.profile, ...(await this.voiceChannelOfHost(peer.profile)) });
   }
 
   private async stopBroadcast(ws: WebSocket, peer: Peer) {
@@ -269,18 +278,50 @@ export class Room extends DurableObject<Env> {
     return this.boardSyncs;
   }
 
-  // Quem entrou sem passe (link copiado, sala aberta pelo link direto) aparece como convidado.
+  // Nome e avatar de quem o Worker identificou: guardados no "Entrar na sala" (passe) ou buscados pelo bot na
+  // primeira conexão (sessão). Quem entrou sem identidade (link copiado, cancelou o login) aparece como convidado.
   private async profileFor(request: Request): Promise<Profile> {
     const userId = request.headers.get(USER_HEADER);
-    const profile = userId && (await this.ctx.storage.get<Profile>(`profile:${userId}`));
+    const profile = userId && ((await this.ctx.storage.get<Profile>(`profile:${userId}`)) ?? (await this.lookUpProfile(userId)));
     return profile || { id: crypto.randomUUID(), name: "Convidado", avatarUrl: null };
+  }
+
+  private async lookUpProfile(userId: string) {
+    const profile = await fetchProfile(this.env, (await this.info())?.guildId ?? null, userId);
+    if (profile) await this.admit(profile);
+    return profile;
+  }
+
+  // Quem começa a transmitir leva a sala para a call dele; se não está em nenhuma (ou é convidado), fica a anterior.
+  private async voiceChannelOfHost(host: Profile) {
+    const voiceChannelId = await voiceChannelOf(this.env, (await this.info())?.guildId ?? null, host.id);
+    return voiceChannelId ? { voiceChannelId } : {};
+  }
+
+  // A contagem muda a cada entrada e saída; espera um pouco e manda só o número final ao Discord.
+  private syncPeopleSoon() {
+    this.peopleSync ??= scheduler.wait(PEOPLE_SYNC_DELAY_MS).then(async () => {
+      this.peopleSync = null;
+      const info = await this.info();
+      const people = await this.peopleCount();
+      if (info && info.people !== people) await this.transition({ people });
+    });
+  }
+
+  private async peopleCount() {
+    return new Set((await this.peers()).map((peer) => peer.profile.id)).size;
   }
 
   // Manda para todo mundo a lista de quem está na sala; fantasmas continuam nela até o prazo de voltar acabar.
   private async broadcastPresence() {
-    const peers = [...this.members().map((ws) => peerOf(ws)!), ...(await this.ghosts()).map((ghost) => ghost.peer)];
-    const people = peers.map(({ id, role, camera, profile }) => ({ ...profile, peerId: id, role, camera }));
+    const people = (await this.peers()).map(({ id, role, camera, profile }) => ({ ...profile, peerId: id, role, camera }));
     this.members().forEach((ws) => send(ws, { type: "presence", people }));
+    this.syncPeopleSoon();
+  }
+
+  // Quem está na sala, contando os fantasmas (que ainda podem voltar).
+  private async peers() {
+    return [...this.members().map((ws) => peerOf(ws)!), ...(await this.ghosts()).map((ghost) => ghost.peer)];
   }
 
   private sendViewers(host: WebSocket) {

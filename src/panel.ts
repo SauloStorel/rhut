@@ -1,4 +1,4 @@
-import { ButtonStyle, CLOSE_ROOM_ACTION, JOIN_ROOM_ACTION, LIVE_RED, OPEN_ROOM_ACTION, embedColor, escapeMarkdown, guildAuthor, relativeTime, row } from "./discord-ui";
+import { ButtonStyle, CLOSE_ROOM_ACTION, LIVE_RED, OPEN_ROOM_ACTION, callButtons, embedColor, escapeMarkdown, guildAuthor, joinButton, relativeTime, roomDetails, row } from "./discord-ui";
 import type { Guild } from "./guild";
 import type { RoomCard } from "./lobby";
 import type { OpenStatus } from "./room";
@@ -21,7 +21,10 @@ const describe: Record<OpenStatus, (card: RoomCard) => { name: string; line: str
 };
 
 export function panel(cards: RoomCard[], guild: Guild | null, accentColor: string) {
-  const rooms = cards.map((card) => ({ card, ...describe[card.status](card) }));
+  const rooms = cards.map((card) => {
+    const { name, line } = describe[card.status](card);
+    return { card, name, line: [line, ...roomDetails(card.status, card)].join(" · ") };
+  });
 
   return {
     embeds: [
@@ -35,7 +38,8 @@ export function panel(cards: RoomCard[], guild: Guild | null, accentColor: strin
     components: [
       ...rooms.slice(0, MAX_ROOMS_WITH_BUTTONS).map(({ card, name }) =>
         row(
-          { style: ButtonStyle.PRIMARY, label: `Entrar · ${name}`, custom_id: `${JOIN_ROOM_ACTION}:${card.roomId}` },
+          joinButton(card, `Entrar · ${name}`),
+          ...callButtons(card),
           { style: ButtonStyle.SECONDARY, label: "Fechar", custom_id: `${CLOSE_ROOM_ACTION}:${card.roomId}` },
         ),
       ),

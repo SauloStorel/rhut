@@ -1,5 +1,6 @@
 import { handleInteraction } from "./discord";
 import { verifyPass } from "./identity";
+import { handleOAuthCallback, sessionUserId, signInIfNeeded } from "./oauth";
 import { USER_HEADER, roomStub } from "./room";
 import { ROOM_ID_PATTERN } from "./room-id";
 import { iceServers } from "./turn";
@@ -13,6 +14,7 @@ type Handler = (request: Request, env: Env, params: Params, ctx: ExecutionContex
 const routes: { method: string; pattern: URLPattern; handle: Handler }[] = [
   { method: "POST", pattern: new URLPattern({ pathname: "/interactions" }), handle: (request, env, _params, ctx) => handleInteraction(request, env, ctx) },
   { method: "GET", pattern: new URLPattern({ pathname: `/r/:room(${ROOM_ID_PATTERN})` }), handle: serveRoomPage },
+  { method: "GET", pattern: new URLPattern({ pathname: "/auth/callback" }), handle: handleOAuthCallback },
   { method: "GET", pattern: new URLPattern({ pathname: `/api/rooms/:room(${ROOM_ID_PATTERN})/ws` }), handle: connectToRoom },
   { method: "GET", pattern: new URLPattern({ pathname: `/api/rooms/:room(${ROOM_ID_PATTERN})` }), handle: serveRoomConfig },
 ];
@@ -26,16 +28,16 @@ export default {
   },
 } satisfies ExportedHandler<Env>;
 
-function serveRoomPage(request: Request, env: Env) {
-  return env.ASSETS.fetch(new URL("/room.html", request.url));
+async function serveRoomPage(request: Request, env: Env, { room }: Params) {
+  return (await signInIfNeeded(request, env, room!)) ?? env.ASSETS.fetch(new URL("/room.html", request.url));
 }
 
 async function connectToRoom(request: Request, env: Env, { room }: Params) {
   if (request.headers.get("Upgrade") !== "websocket") return new Response("Expected WebSocket", { status: 426 });
 
-  // O header de identidade só pode vir daqui, depois de validar o passe.
+  // O header de identidade só pode vir daqui, depois de validar o passe (link pessoal) ou a sessão (login pelo Discord).
   const headers = new Headers(request.headers);
-  const userId = await verifyPass(env, room!, new URL(request.url).searchParams.get("pass"));
+  const userId = (await verifyPass(env, room!, new URL(request.url).searchParams.get("pass"))) ?? (await sessionUserId(request, env));
   headers.delete(USER_HEADER);
   if (userId) headers.set(USER_HEADER, userId);
 

@@ -14,6 +14,8 @@ O compartilhamento de tela do próprio Discord limita a qualidade para quem não
 
 - **Comando `/live`**: cria a sala e posta um aviso no canal que acompanha o estado dela (aberta, ao vivo). Quando a sala fecha, o aviso sai do canal, então avisos velhos não se acumulam na conversa. Quem digita o comando não recebe confirmação nenhuma: o próprio aviso é a confirmação, e só aparece mensagem se der erro.
 - **Painel de salas**: quem pode gerenciar canais digita `/painel` num canal (de preferência um só para isso) e o bot fixa ali uma mensagem com as salas abertas e o botão **Abrir sala**. Com o painel, toda sala aparece nele, mesmo as abertas por `/live` em outro canal, e a lista se atualiza sozinha: aberta, ao vivo, e some quando a sala fecha. Rodar `/painel` em outro canal muda o painel de lugar.
+- **Quem está e em qual call**: o aviso e o painel mostram quantas pessoas estão assistindo e a call de voz de quem abriu a sala (e, depois, de quem está transmitindo), com um botão **Ir para a call**.
+- **Entrar com um clique** (opcional): com o login pelo Discord ligado, o **Entrar** abre a sala direto. Na primeira vez, o Discord pergunta se o rhut pode saber quem é você; depois, a sala abre com o seu nome e a sua foto do servidor, sem mensagem de link no chat.
 - **Só o som do jogo**: compartilhando a janela do jogo, vai só o áudio dela, em estéreo a 128 kbps. Antes de abrir a escolha do navegador, a página mostra um passo a passo rápido.
 - **Qualidade ajustável**: 720p30, 1080p30, 1080p60 e um modo "Texto nítido" para código e slides. Dá para trocar no meio da transmissão, sem reconectar ninguém.
 - **Diagnóstico real**: quem transmite vê a resolução, o FPS e o codec que estão saindo de verdade, e um aviso quando a CPU ou o upload estão no limite. Quem assiste vê o atraso estimado.
@@ -36,7 +38,7 @@ O compartilhamento de tela do próprio Discord limita a qualidade para quem não
 - **Bot sem servidor ligado**: o Discord chama o Worker por HTTP (Interactions Endpoint) só quando alguém usa o comando ou clica num botão. Não existe processo rodando 24 horas.
 - **Um painel por servidor**: outro Durable Object guarda onde o painel está e quais salas estão abertas. Cada sala avisa esse objeto quando muda de estado, e ele edita a mesma mensagem.
 - **Uma sala, um Durable Object**: ele faz só a apresentação entre os navegadores (offer, answer e candidates) e guarda o estado do aviso. O vídeo nunca passa por ele.
-- **Identidade sem login**: o botão "Entrar na sala" já diz ao bot quem clicou. O bot responde, só para essa pessoa, com um link assinado (HMAC) que vale para aquela sala por 12 horas. Quem abre o link sem passar pelo botão entra como "Convidado".
+- **Identidade**: com o login pelo Discord ligado, o **Entrar** é um link direto. Na primeira vez a pessoa autoriza o rhut (só o escopo `identify`) e ganha um cookie assinado (HMAC) que vale 30 dias; nome e avatar do servidor vêm do bot. Sem o login ligado, o botão "Entrar na sala" diz ao bot quem clicou, e ele responde só para essa pessoa com um link assinado que vale para aquela sala por 12 horas. Quem abre a sala sem nenhum dos dois (link copiado, cancelou a autorização) entra como "Convidado".
 - **Codec em hardware**: como quem transmite codifica uma cópia para cada pessoa, a página põe na frente o codec que a GPU consegue codificar (AV1, H.264 ou VP9).
 - **Fechamento automático**: a sala vazia por 15 minutos fecha sozinha e tira o aviso do canal.
 - **Quedas rápidas não derrubam a sala**: se a conexão de alguém cair (Wi-Fi oscilou, celular trocou de rede, página recarregada), a página reconecta sozinha e a sala espera até 20 segundos antes de dar a pessoa como saída. Se quem transmite volta nesse tempo, a transmissão continua para todo mundo. Se a conexão de vídeo cair, quem assiste pede uma nova automaticamente.
@@ -88,7 +90,22 @@ Pronto. Digite `/live` em qualquer canal do servidor, ou `/painel` no canal onde
 
 O bot não lê as mensagens do canal, então não percebe quando a conversa empurra o painel para cima. Para ele ficar sempre à vista, use um canal onde só o bot escreve.
 
-### 4. TURN (opcional)
+### 4. Entrar com um clique (opcional)
+
+Com isso ligado, o **Entrar** abre a sala direto, sem o bot mandar um link pessoal no chat:
+
+1. No portal do Discord, em **OAuth2 > Redirects**, adicione `https://rhut.SEU-USUARIO.workers.dev/auth/callback` e salve.
+2. Ainda em **OAuth2**, copie o **Client Secret** (clique em **Reset Secret** se ele não aparecer).
+3. Cadastre o Application ID e o Client Secret:
+
+   ```sh
+   npx wrangler secret put DISCORD_APPLICATION_ID
+   npx wrangler secret put DISCORD_CLIENT_SECRET
+   ```
+
+Salas abertas antes disso continuam com o "Entrar" antigo até fecharem.
+
+### 5. TURN (opcional)
 
 Sem TURN, a conexão direta funciona na maioria das redes. Se alguém atrás de rede restritiva (alguns 4G, redes de empresa ou faculdade) não conseguir assistir, ative o retransmissor da Cloudflare:
 
@@ -106,7 +123,8 @@ Sem TURN, a conexão direta funciona na maioria das redes. Se alguém atrás de 
 |---|---|---|
 | `DISCORD_PUBLIC_KEY` | secret | Confere se as chamadas vêm mesmo do Discord |
 | `DISCORD_BOT_TOKEN` | secret | Posta, edita e apaga o aviso e o painel no canal, lê nome e ícone do servidor |
-| `SESSION_SECRET` | secret | Assina os links pessoais da sala |
+| `SESSION_SECRET` | secret | Assina os links pessoais da sala e o cookie de quem entrou pelo Discord |
+| `DISCORD_APPLICATION_ID`, `DISCORD_CLIENT_SECRET` | secret, opcional | Liga o "Entrar" com um clique (login pelo Discord) |
 | `TURN_KEY_ID`, `TURN_KEY_API_TOKEN` | secret, opcional | Credenciais temporárias de TURN |
 | `ACCENT_COLOR` | `wrangler.jsonc` | `"auto"` tira a cor do ícone do servidor (só na página). Um hex fixo, como `"#e5242b"`, vale também para o aviso no Discord |
 

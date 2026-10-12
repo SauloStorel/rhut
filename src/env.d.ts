@@ -6,6 +6,8 @@ interface Env {
   DISCORD_PUBLIC_KEY: string;
   DISCORD_BOT_TOKEN: string;
   SESSION_SECRET: string;
+  DISCORD_APPLICATION_ID?: string;
+  DISCORD_CLIENT_SECRET?: string;
   TURN_KEY_ID?: string;
   TURN_KEY_API_TOKEN?: string;
 }

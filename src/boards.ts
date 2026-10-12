@@ -32,9 +32,11 @@ const panelBoard: Board = {
     return {};
   },
 
-  sync({ status, roomId, guildId, openerName, host, liveSince }, env) {
+  sync({ status, roomId, guildId, openerName, host, liveSince, people, pageUrl, voiceChannelId }, env) {
     const lobby = lobbyStub(env, guildId!);
-    return status === "closed" ? lobby.untrack(roomId) : lobby.track({ roomId, status, openerName, host, liveSince });
+    return status === "closed"
+      ? lobby.untrack(roomId)
+      : lobby.track({ roomId, guildId, status, openerName, host, liveSince, people, pageUrl, voiceChannelId });
   },
 };
 

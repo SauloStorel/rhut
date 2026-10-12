@@ -1,4 +1,5 @@
 import type { Guild } from "./guild";
+import type { OpenStatus, RoomInfo } from "./room";
 
 // Peças das mensagens do bot no Discord, usadas pelo aviso da sala e pelo painel.
 
@@ -14,9 +15,32 @@ const DISCORD_BLURPLE = 0x5865f2;
 const MAX_LABEL = 80;
 
 type Button = { style: number; label: string } & ({ custom_id: string } | { url: string });
+type RoomLinks = Pick<RoomInfo, "roomId" | "guildId" | "pageUrl" | "voiceChannelId">;
+
+const CROWD: Record<OpenStatus, (people: number) => string | null> = {
+  waiting: (people) => (people > 0 ? `${people} na sala` : null),
+  live: (people) => (people > 1 ? `${people - 1} assistindo` : null),
+};
 
 export function row(...buttons: Button[]) {
   return { type: ComponentType.ACTION_ROW, components: buttons.map((button) => ({ type: ComponentType.BUTTON, ...button, label: truncate(button.label) })) };
+}
+
+// Com login pelo Discord, "Entrar" é um link direto para a sala; sem, o clique pede ao bot o link pessoal.
+// (Botão de link no Discord é sempre cinza; não dá para deixá-lo na cor de destaque.)
+export function joinButton({ roomId, pageUrl }: RoomLinks, label: string): Button {
+  return pageUrl ? { style: ButtonStyle.LINK, label, url: pageUrl } : { style: ButtonStyle.PRIMARY, label, custom_id: `${JOIN_ROOM_ACTION}:${roomId}` };
+}
+
+// Link do canal de voz: clicar nele no Discord entra na call. Sala sem call não tem o botão.
+export function callButtons({ guildId, voiceChannelId }: RoomLinks): Button[] {
+  return guildId && voiceChannelId ? [{ style: ButtonStyle.LINK, label: "Ir para a call", url: `https://discord.com/channels/${guildId}/${voiceChannelId}` }] : [];
+}
+
+// O que acompanha o estado da sala no aviso e no painel: quantas pessoas e em qual call ("3 assistindo", "na call #Geral").
+// Salas abertas antes da contagem não guardaram `people`.
+export function roomDetails(status: OpenStatus, { people, voiceChannelId }: Pick<RoomInfo, "people" | "voiceChannelId">) {
+  return [CROWD[status](people ?? 0), voiceChannelId && `na call <#${voiceChannelId}>`].filter((detail): detail is string => Boolean(detail));
 }
 
 // "auto" só dá para calcular no navegador (precisa ler o ícone); no Discord fica o azul padrão.
