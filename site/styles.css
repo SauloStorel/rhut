@@ -887,10 +887,11 @@ img { display: block; max-width: 100%; height: auto; }
   scrollbar-width: thin;
 }
 
+/* No canto de baixo, ao lado da última linha (a mais curta), para não cobrir o fim do "git clone". */
 .copy {
   position: absolute;
-  top: 10px;
   right: 10px;
+  bottom: 10px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1126,9 +1127,11 @@ img { display: block; max-width: 100%; height: auto; }
   :root { --bar-height: 56px; }
   .lockup { width: 78px; height: 24px; }
   .presence-count { display: none; }
-  .hero { min-height: 560px; gap: 10px; }
-  .hero-symbol { right: -34%; bottom: auto; top: -6%; width: 82vw; }
-  .hero-copy { padding-top: 34vw; }
+  /* No celular o texto não cabe numa altura fixa: o palco cresce com o conteúdo (ainda ocupando a tela toda
+     quando sobra espaço), e o símbolo fica no alto, terminando antes do título em vez de passar por trás dele. */
+  .hero { grid-template-rows: 1fr auto; height: auto; min-height: calc(100svh - var(--bar-height)); max-height: none; gap: 10px; }
+  .hero-symbol { right: -26vw; bottom: auto; top: -18vw; width: 64vw; }
+  .hero-copy { padding-top: 36vw; }
   .live-sep { display: none; }
   .hero-title { font-size: clamp(2.8rem, 13vw, 4rem); }
   .dock { flex-direction: column; align-items: stretch; padding: 12px; }
@@ -1152,7 +1155,6 @@ img { display: block; max-width: 100%; height: auto; }
   .cam { width: 0; flex: 1; }
   .feature-list { grid-template-columns: 1fr; }
   .paths { grid-template-columns: 1fr; }
-  .code pre { padding-top: 52px; }
   .limits-list { grid-template-columns: 1fr; }
   .closing { min-height: 70vh; }
   .closing-symbol { width: 74vw; right: -22%; top: -3%; }
