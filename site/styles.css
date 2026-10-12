@@ -21,6 +21,7 @@
   --live: #f23f43;
   --radius: 14px;
   --gutter: clamp(16px, 4vw, 40px);
+  --bar-height: 64px;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   color-scheme: dark;
 }
@@ -29,7 +30,11 @@
 
 [hidden] { display: none !important; }
 
-html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+/* A barra do topo fica presa na tela: o que os links do menu levam até para logo abaixo dela, sem deixar
+   aparecer uma faixa da seção anterior. O título de cada seção ainda ganha um respiro próprio. */
+html { scroll-behavior: smooth; scroll-padding-top: var(--bar-height); }
+
+.section-title { scroll-margin-top: 40px; }
 
 body {
   margin: 0;
@@ -129,7 +134,7 @@ img { display: block; max-width: 100%; height: auto; }
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  height: 64px;
+  height: var(--bar-height);
   padding: 0 var(--gutter);
   background: rgb(0 0 0 / 0.82);
   backdrop-filter: blur(14px) saturate(1.4);
@@ -177,7 +182,7 @@ img { display: block; max-width: 100%; height: auto; }
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   gap: 12px;
-  height: calc(100svh - 64px);
+  height: calc(100svh - var(--bar-height));
   min-height: 600px;
   max-height: 1100px;
   padding: 0 var(--gutter) var(--gutter);
@@ -967,7 +972,7 @@ img { display: block; max-width: 100%; height: auto; }
 
 .toasts {
   position: fixed;
-  top: 76px;
+  top: calc(var(--bar-height) + 12px);
   right: var(--gutter);
   z-index: 30;
   display: flex;
@@ -1118,10 +1123,10 @@ img { display: block; max-width: 100%; height: auto; }
 
 @media (max-width: 640px) {
   body { font-size: 16px; }
-  .topbar { height: 56px; }
+  :root { --bar-height: 56px; }
   .lockup { width: 78px; height: 24px; }
   .presence-count { display: none; }
-  .hero { height: calc(100svh - 56px); min-height: 560px; gap: 10px; }
+  .hero { min-height: 560px; gap: 10px; }
   .hero-symbol { right: -34%; bottom: auto; top: -6%; width: 82vw; }
   .hero-copy { padding-top: 34vw; }
   .live-sep { display: none; }
