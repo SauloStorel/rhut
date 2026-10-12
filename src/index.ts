@@ -4,6 +4,7 @@ import { USER_HEADER, roomStub } from "./room";
 import { ROOM_ID_PATTERN } from "./room-id";
 import { iceServers } from "./turn";
 
+export { Lobby } from "./lobby";
 export { Room } from "./room";
 
 type Params = Record<string, string | undefined>;

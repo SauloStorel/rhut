@@ -13,6 +13,7 @@ O compartilhamento de tela do próprio Discord limita a qualidade para quem não
 ## O que tem
 
 - **Comando `/live`**: cria a sala e posta um aviso no canal que acompanha o estado dela (aberta, ao vivo). Quando a sala fecha, o aviso sai do canal, então avisos velhos não se acumulam na conversa. Quem digita o comando não recebe confirmação nenhuma: o próprio aviso é a confirmação, e só aparece mensagem se der erro.
+- **Painel de salas**: quem pode gerenciar canais digita `/painel` num canal (de preferência um só para isso) e o bot fixa ali uma mensagem com as salas abertas e o botão **Abrir sala**. Com o painel, toda sala aparece nele, mesmo as abertas por `/live` em outro canal, e a lista se atualiza sozinha: aberta, ao vivo, e some quando a sala fecha. Rodar `/painel` em outro canal muda o painel de lugar.
 - **Só o som do jogo**: compartilhando a janela do jogo, vai só o áudio dela, em estéreo a 128 kbps. Antes de abrir a escolha do navegador, a página mostra um passo a passo rápido.
 - **Qualidade ajustável**: 720p30, 1080p30, 1080p60 e um modo "Texto nítido" para código e slides. Dá para trocar no meio da transmissão, sem reconectar ninguém.
 - **Diagnóstico real**: quem transmite vê a resolução, o FPS e o codec que estão saindo de verdade, e um aviso quando a CPU ou o upload estão no limite. Quem assiste vê o atraso estimado.
@@ -33,6 +34,7 @@ O compartilhamento de tela do próprio Discord limita a qualidade para quem não
 ```
 
 - **Bot sem servidor ligado**: o Discord chama o Worker por HTTP (Interactions Endpoint) só quando alguém usa o comando ou clica num botão. Não existe processo rodando 24 horas.
+- **Um painel por servidor**: outro Durable Object guarda onde o painel está e quais salas estão abertas. Cada sala avisa esse objeto quando muda de estado, e ele edita a mesma mensagem.
 - **Uma sala, um Durable Object**: ele faz só a apresentação entre os navegadores (offer, answer e candidates) e guarda o estado do aviso. O vídeo nunca passa por ele.
 - **Identidade sem login**: o botão "Entrar na sala" já diz ao bot quem clicou. O bot responde, só para essa pessoa, com um link assinado (HMAC) que vale para aquela sala por 12 horas. Quem abre o link sem passar pelo botão entra como "Convidado".
 - **Codec em hardware**: como quem transmite codifica uma cópia para cada pessoa, a página põe na frente o codec que a GPU consegue codificar (AV1, H.264 ou VP9).
@@ -75,14 +77,16 @@ openssl rand -hex 32 | npx wrangler secret put SESSION_SECRET
 ### 3. Ligar o Discord ao Worker
 
 1. No portal do Discord, em **General Information > Interactions Endpoint URL**, coloque `https://rhut.SEU-USUARIO.workers.dev/interactions` e salve. O Discord testa a URL na hora.
-2. Cadastre o comando `/live`:
+2. Cadastre os comandos `/live` e `/painel`:
 
    ```sh
    cp .env.example .env   # preencha DISCORD_APPLICATION_ID e DISCORD_BOT_TOKEN
    npm run register
    ```
 
-Pronto. Digite `/live` em qualquer canal do servidor.
+Pronto. Digite `/live` em qualquer canal do servidor, ou `/painel` no canal onde as salas devem ficar.
+
+O bot não lê as mensagens do canal, então não percebe quando a conversa empurra o painel para cima. Para ele ficar sempre à vista, use um canal onde só o bot escreve.
 
 ### 4. TURN (opcional)
 

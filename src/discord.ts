@@ -1,9 +1,9 @@
-import { CLOSE_ROOM_ACTION, JOIN_ROOM_ACTION, personalLink } from "./announcement";
+import { personalLink } from "./announcement";
 import { discordApi } from "./discord-api";
-import { fetchGuild } from "./guild";
+import { CLOSE_ROOM_ACTION, JOIN_ROOM_ACTION, OPEN_ROOM_ACTION } from "./discord-ui";
 import { type DiscordMember, type DiscordUser, profileOf, signPass } from "./identity";
+import { type Opener, installPanel, openRoom } from "./open-room";
 import { roomStub } from "./room";
-import { newRoomId } from "./room-id";
 
 // https://discord.com/developers/docs/interactions/receiving-and-responding
 const InteractionType = { PING: 1, APPLICATION_COMMAND: 2, MESSAGE_COMPONENT: 3 } as const;
@@ -24,47 +24,23 @@ type Interaction = {
 
 type Responder = (interaction: Interaction, request: Request, env: Env, ctx: ExecutionContext) => Promise<object | undefined> | object | undefined;
 
+// Abrir sala ou postar o painel passa dos 3 s que o Discord espera quando o Worker acorda frio. Os comandos
+// respondem "pensando..." na hora (só para quem digitou) e resolvem essa resposta quando terminam.
 const commands: Record<string, Responder> = {
-  // O Discord desiste de esperar a resposta em 3 s, e abrir a sala (buscar o servidor, postar o aviso) passa
-  // disso quando o Worker acorda frio. Responde "pensando..." na hora e resolve a resposta quando a sala estiver pronta.
   live: (interaction, _request, env, ctx) => {
-    ctx.waitUntil(openRoom(interaction, env));
+    ctx.waitUntil(openRoom(openerOf(interaction), env).then((message) => finishThinking(interaction, env, message)));
+    return { type: ResponseType.DEFERRED_CHANNEL_MESSAGE, data: { flags: EPHEMERAL } };
+  },
+  painel: (interaction, _request, env, ctx) => {
+    ctx.waitUntil(installPanel(interaction.guild_id!, interaction.channel_id, env).then((message) => finishThinking(interaction, env, message)));
     return { type: ResponseType.DEFERRED_CHANNEL_MESSAGE, data: { flags: EPHEMERAL } };
   },
 };
 
-const CANNOT_POST =
-  "Não consegui postar o aviso neste canal. Confira se o bot pode **ver o canal**, **enviar mensagens** e **inserir links** aqui.";
-const UNEXPECTED_ERROR = "Não consegui abrir a sala agora. Tente o /live de novo em instantes.";
-
-// Deu certo: o próprio aviso no canal é a confirmação, e o "pensando..." some sem deixar mensagem.
-// Deu errado: o "pensando..." vira o motivo, só para quem digitou o comando.
-async function openRoom(interaction: Interaction, env: Env) {
-  const problem = await problemOpeningRoom(interaction, env).catch((error) => {
-    console.error("Não deu para abrir a sala:", error);
-    return UNEXPECTED_ERROR;
-  });
-  const path = `/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`;
-  await (problem ? discordApi(env, "PATCH", path, { content: problem }) : discordApi(env, "DELETE", path));
-}
-
-// O aviso é postado pelo bot (e não como resposta do comando) porque resposta de comando
-// só pode ser editada por 15 minutos, e o aviso acompanha a sala enquanto ela existir.
-async function problemOpeningRoom(interaction: Interaction, env: Env) {
-  const roomId = newRoomId();
-  const posted = await roomStub(env, roomId).open({
-    roomId,
-    guild: await fetchGuild(interaction.guild_id, env),
-    openerId: userIdOf(interaction),
-    channelId: interaction.channel_id,
-  });
-  return posted ? null : CANNOT_POST;
-}
-
-type ComponentHandler = (interaction: Interaction, request: Request, env: Env, roomId: string) => Promise<object>;
+type ComponentHandler = (interaction: Interaction, request: Request, env: Env, ctx: ExecutionContext, roomId: string) => Promise<object> | object;
 
 const components: Record<string, ComponentHandler> = {
-  [JOIN_ROOM_ACTION]: async (interaction, request, env, roomId) => {
+  [JOIN_ROOM_ACTION]: async (interaction, request, env, _ctx, roomId) => {
     const user = userOf(interaction);
     await roomStub(env, roomId).admit(profileOf(user, interaction.member, interaction.guild_id));
 
@@ -72,20 +48,25 @@ const components: Record<string, ComponentHandler> = {
     url.searchParams.set("pass", await signPass(env, roomId, user.id));
     return { type: ResponseType.CHANNEL_MESSAGE, data: { ...personalLink(url.href), flags: EPHEMERAL } };
   },
-  [CLOSE_ROOM_ACTION]: async (interaction, _request, env, roomId) => {
-    const closed = await roomStub(env, roomId).requestClose(userIdOf(interaction));
+  [CLOSE_ROOM_ACTION]: async (interaction, _request, env, _ctx, roomId) => {
+    const closed = await roomStub(env, roomId).requestClose(userOf(interaction).id);
     return closed
       ? { type: ResponseType.DEFERRED_UPDATE_MESSAGE }
       : privateReply("Só quem está na sala pode fechar. Entre pelo botão **Entrar na sala** e tente de novo.");
+  },
+  // "Abrir sala" do painel: o clique não gera mensagem (o painel ganha a linha nova); só um problema vira aviso.
+  [OPEN_ROOM_ACTION]: (interaction, _request, env, ctx) => {
+    ctx.waitUntil(openRoom(openerOf(interaction), env).then((message) => followUp(interaction, env, message)));
+    return { type: ResponseType.DEFERRED_UPDATE_MESSAGE };
   },
 };
 
 const responders: Record<number, Responder> = {
   [InteractionType.PING]: () => ({ type: ResponseType.PONG }),
   [InteractionType.APPLICATION_COMMAND]: (interaction, request, env, ctx) => commands[interaction.data!.name!]?.(interaction, request, env, ctx),
-  [InteractionType.MESSAGE_COMPONENT]: (interaction, request, env) => {
+  [InteractionType.MESSAGE_COMPONENT]: (interaction, request, env, ctx) => {
     const [action, roomId] = interaction.data!.custom_id!.split(":");
-    return components[action]?.(interaction, request, env, roomId);
+    return components[action]?.(interaction, request, env, ctx, roomId);
   },
 };
 
@@ -118,12 +99,27 @@ function userOf(interaction: Interaction) {
   return (interaction.member?.user ?? interaction.user)!;
 }
 
-function userIdOf(interaction: Interaction) {
-  return userOf(interaction).id;
+function openerOf(interaction: Interaction): Opener {
+  return { guildId: interaction.guild_id, channelId: interaction.channel_id, user: userOf(interaction), member: interaction.member };
 }
 
 function privateReply(content: string) {
   return { type: ResponseType.CHANNEL_MESSAGE, data: { content, flags: EPHEMERAL } };
+}
+
+// Resolve o "pensando...": vira a mensagem, ou some quando não há nada a dizer.
+function finishThinking(interaction: Interaction, env: Env, message: string | null) {
+  const path = `${webhookPath(interaction)}/messages/@original`;
+  return message ? discordApi(env, "PATCH", path, { content: message }) : discordApi(env, "DELETE", path);
+}
+
+// Mensagem só para quem clicou, depois de um clique que não deixou resposta.
+async function followUp(interaction: Interaction, env: Env, message: string | null) {
+  if (message) await discordApi(env, "POST", webhookPath(interaction), { content: message, flags: EPHEMERAL });
+}
+
+function webhookPath(interaction: Interaction) {
+  return `/webhooks/${interaction.application_id}/${interaction.token}`;
 }
 
 function hexToBytes(hex: string) {

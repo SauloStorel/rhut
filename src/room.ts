@@ -1,13 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
-import { announcement } from "./announcement";
-import { discordApi } from "./discord-api";
+import { type BoardName, boardOf } from "./boards";
 import type { Guild } from "./guild";
 import type { Profile } from "./identity";
 
 // Uma sala = no máximo uma pessoa transmitindo a tela (host) e o resto assistindo (viewers); qualquer um pode
 // ligar a câmera. O servidor só faz a "apresentação" WebRTC entre os navegadores; vídeo e câmeras vão direto.
 // Cada pessoa tem uma conexão só: começar/parar de transmitir é uma mensagem, para a câmera não cair na troca.
-// Salas abertas pelo /live também têm um aviso no canal do Discord, que acompanha o estado da sala.
+// Salas abertas pelo Discord aparecem lá (aviso próprio no canal ou linha no painel, ver boards.ts) e acompanham o estado da sala.
 //
 // Quem cai sem querer (Wi-Fi oscilou, celular trocou de rede) vira um "fantasma" por alguns segundos: continua
 // na sala para os outros e, se reconectar a tempo, volta como a mesma pessoa, sem derrubar a transmissão.
@@ -21,7 +20,15 @@ type Command = (ws: WebSocket, peer: Peer, message: Message) => unknown;
 export type RoomStatus = "waiting" | "live" | "closed";
 export type OpenStatus = Exclude<RoomStatus, "closed">;
 
-export type NewRoom = { roomId: string; guild: Guild | null; openerId: string; channelId: string };
+export type NewRoom = {
+  roomId: string;
+  guildId: string | null;
+  guild: Guild | null;
+  openerId: string;
+  openerName: string;
+  channelId: string;
+  board: BoardName;
+};
 
 export type RoomInfo = NewRoom & {
   messageId: string;
@@ -37,7 +44,6 @@ const RECONNECT_GRACE_MS = 20 * 1000;
 // Aba fechada ou página saindo: a pessoa sai na hora, sem esperar por uma volta.
 const DELIBERATE_CLOSE_CODES = new Set([1000, 1001]);
 const RESUME_TOKEN_PATTERN = /^[0-9a-f-]{36}$/;
-const ANNOUNCEMENT_ATTEMPTS = 3;
 const HOST_TAKEN = "Já tem alguém transmitindo nesta sala.";
 const GHOST_PREFIX = "ghost:";
 
@@ -47,7 +53,7 @@ export const USER_HEADER = "X-Room-User";
 export class Room extends DurableObject<Env> {
   // Sockets que já saíram da sala mas ainda aparecem em getWebSockets() enquanto fecham.
   private readonly departed = new WeakSet<WebSocket>();
-  private announcementEdits = Promise.resolve();
+  private boardSyncs = Promise.resolve();
 
   private readonly onLeave: Record<Role, (peer: Peer) => unknown> = {
     host: (peer) => this.endBroadcast(peer.id),
@@ -69,14 +75,13 @@ export class Room extends DurableObject<Env> {
     ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
   }
 
-  // Chamado pelo /live. Retorna false se o bot não conseguiu postar o aviso no canal.
+  // Chamado pelo /live ou pelo "Abrir sala" do painel. Retorna false se o bot não conseguiu mostrar a sala no Discord.
   async open(room: NewRoom) {
-    const info = { ...room, messageId: "", status: "waiting", liveSince: null, host: null } satisfies RoomInfo;
-    const response = await discordApi(this.env, "POST", `/channels/${room.channelId}/messages`, announcement(info, this.env.ACCENT_COLOR));
-    if (!response.ok) return false;
+    const info: RoomInfo = { ...room, messageId: "", status: "waiting", liveSince: null, host: null };
+    const shown = await boardOf(info).open(info, this.env);
+    if (!shown) return false;
 
-    const { id } = await response.json<{ id: string }>();
-    await this.save({ ...info, messageId: id });
+    await this.save({ ...info, ...shown });
     await this.scheduleAlarm();
     return true;
   }
@@ -86,13 +91,12 @@ export class Room extends DurableObject<Env> {
     await this.ctx.storage.put(`profile:${profile.id}`, profile);
   }
 
-  // Só quem está conectado na sala (entrou pelo "Entrar na sala") pode fechar.
+  // Só quem está conectado na sala (entrou pelo "Entrar na sala") pode fechar. Responde na hora e fecha em seguida:
+  // o clique no Discord precisa de resposta em 3 s, e atualizar o Discord pode esperar um limite de taxa.
   async requestClose(userId: string) {
     const isInRoom = this.members().some((ws) => peerOf(ws)!.profile.id === userId);
-    if (!isInRoom) return false;
-
-    await this.close();
-    return true;
+    if (isInRoom) this.ctx.waitUntil(this.close());
+    return isInRoom;
   }
 
   async info() {
@@ -243,38 +247,26 @@ export class Room extends DurableObject<Env> {
     return this.members().length === 0 && (await this.ghosts()).length === 0;
   }
 
-  // Muda o estado e atualiza o aviso no Discord. "closed" é final: nada mais muda depois dele.
-  // Salas sem aviso (abertas pelo link direto, sem /live) não têm estado para guardar.
+  // Muda o estado e atualiza a sala no Discord. "closed" é final: nada mais muda depois dele.
+  // Salas abertas pelo link direto (sem /live nem painel) não têm estado para guardar.
   private async transition(changes: Partial<RoomInfo>) {
     const info = await this.info();
     if (!info || info.status === "closed") return;
 
     await this.save({ ...info, ...changes });
-    await this.editAnnouncement();
+    await this.syncBoard();
   }
 
-  // As atualizações entram numa fila e cada uma manda o estado mais recente: duas mudanças rápidas não chegam fora
-  // de ordem ao Discord, e um limite de taxa (429) espera o tempo pedido em vez de deixar o aviso desatualizado.
-  private editAnnouncement() {
-    this.announcementEdits = this.announcementEdits
-      .then(() => this.sendAnnouncement())
-      .catch((error) => console.error("Não deu para atualizar o aviso no Discord:", error));
-    return this.announcementEdits;
-  }
-
-  // Sala aberta: o aviso mostra o estado atual. Sala encerrada: o aviso sai do canal.
-  private async sendAnnouncement(attempt = 1): Promise<void> {
-    const { status, ...info } = (await this.info())!;
-    const path = `/channels/${info.channelId}/messages/${info.messageId}`;
-    const response =
-      status === "closed"
-        ? await discordApi(this.env, "DELETE", path)
-        : await discordApi(this.env, "PATCH", path, announcement({ ...info, status }, this.env.ACCENT_COLOR));
-    if (response.status !== 429 || attempt >= ANNOUNCEMENT_ATTEMPTS) return;
-
-    const { retry_after } = await response.json<{ retry_after: number }>();
-    await scheduler.wait(retry_after * 1000);
-    return this.sendAnnouncement(attempt + 1);
+  // As atualizações entram numa fila e cada uma manda o estado mais recente: duas mudanças rápidas não chegam
+  // fora de ordem ao Discord.
+  private syncBoard() {
+    this.boardSyncs = this.boardSyncs
+      .then(async () => {
+        const info = (await this.info())!;
+        await boardOf(info).sync(info, this.env);
+      })
+      .catch((error) => console.error("Não deu para atualizar a sala no Discord:", error));
+    return this.boardSyncs;
   }
 
   // Quem entrou sem passe (link copiado, sala aberta pelo link direto) aparece como convidado.
