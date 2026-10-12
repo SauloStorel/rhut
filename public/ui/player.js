@@ -4,7 +4,8 @@ import { MAX_VOLUME, createSound } from "./sound.js";
 
 // Controles próprios do vídeo. Dois modos:
 // - "watch": quem assiste; tem som (até 200%), volume e o convite "Ativar som" (o som começa mudo pelo autoplay).
-// - "preview": quem transmite vendo a própria tela; sempre mudo, só tela cheia.
+// - "preview": quem transmite vendo a própria tela; sempre mudo, só tela cheia e sem modo ambiente
+//   (a GPU já está ocupada codificando uma cópia da tela para cada pessoa).
 const HIDE_CONTROLS_AFTER_MS = 2500;
 
 export function createPlayer(stage, { preferences }) {
@@ -63,7 +64,8 @@ export function createPlayer(stage, { preferences }) {
 
   function syncAmbient() {
     ambientToggle.setAttribute("aria-pressed", String(ambientOn));
-    if (ambientOn && stage.dataset.screen === "video") ambient.start();
+    ambientToggle.hidden = mode !== "watch";
+    if (ambientOn && mode === "watch" && stage.dataset.screen === "video") ambient.start();
     else ambient.stop();
   }
 

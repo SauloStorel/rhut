@@ -1,6 +1,7 @@
-import type { RoomInfo, RoomStatus } from "./room";
+import type { OpenStatus, RoomInfo } from "./room";
 
-// Aviso que o bot posta no canal e vai editando conforme a sala muda de estado.
+// Aviso que o bot posta no canal e vai editando conforme a sala muda de estado. Quando a sala fecha, ele sai
+// do canal (não tem versão "encerrada"), para os avisos antigos não se acumularem na conversa.
 
 export const JOIN_ROOM_ACTION = "join-room";
 export const CLOSE_ROOM_ACTION = "close-room";
@@ -8,12 +9,11 @@ export const CLOSE_ROOM_ACTION = "close-room";
 const ComponentType = { ACTION_ROW: 1, BUTTON: 2 } as const;
 const ButtonStyle = { PRIMARY: 1, DANGER: 4, LINK: 5 } as const;
 const LIVE_RED = 0xda373c;
-const CLOSED_GREY = 0x4e5058;
 const DISCORD_BLURPLE = 0x5865f2;
 
 type View = { title: string; description: string; color: number; components: object[]; thumbnail?: { url: string } };
 
-const views: Record<RoomStatus, (info: RoomInfo, accentColor: number) => View> = {
+const views: Record<OpenStatus, (info: RoomInfo, accentColor: number) => View> = {
   waiting: (info, accentColor) => ({
     title: "Sala aberta",
     description: `<@${info.openerId}> abriu uma sala. Clique em **Entrar na sala**. Quem for transmitir clica em **Compartilhar tela** lá dentro.`,
@@ -22,20 +22,14 @@ const views: Record<RoomStatus, (info: RoomInfo, accentColor: number) => View> =
   }),
   live: (info) => ({
     title: "Ao vivo agora",
-    description: `**${escapeMarkdown(info.host?.name ?? "Alguém")}** está transmitindo desde ${discordTime(info.liveSince!, "R")}.`,
+    description: `**${escapeMarkdown(info.host?.name ?? "Alguém")}** está transmitindo desde ${relativeTime(info.liveSince!)}.`,
     color: LIVE_RED,
     components: roomButtons(info),
     thumbnail: info.host?.avatarUrl ? { url: info.host.avatarUrl } : undefined,
   }),
-  closed: (info) => ({
-    title: "Sala encerrada",
-    description: `Ficou aberta das ${discordTime(info.openedAt, "t")} às ${discordTime(info.closedAt!, "t")} · ${peakText(info.peakViewers)}.`,
-    color: CLOSED_GREY,
-    components: [],
-  }),
 };
 
-export function announcement(info: RoomInfo, accentColor: string) {
+export function announcement(info: RoomInfo & { status: OpenStatus }, accentColor: string) {
   const { components, ...embed } = views[info.status](info, embedColor(accentColor));
 
   return {
@@ -76,13 +70,7 @@ function escapeMarkdown(text: string) {
   return text.replace(/[\\*_`~|>]/g, "\\$&");
 }
 
-// Timestamps do Discord se ajustam ao fuso de quem lê; "R" vira "há 5 minutos" e atualiza sozinho.
-function discordTime(ms: number, style: "t" | "R") {
-  return `<t:${Math.floor(ms / 1000)}:${style}>`;
-}
-
-const PEAK_TEXTS: Record<number, string> = { 0: "ninguém assistiu", 1: "pico de 1 pessoa assistindo" };
-
-function peakText(peak: number) {
-  return PEAK_TEXTS[peak] ?? `pico de ${peak} pessoas assistindo`;
+// Timestamp do Discord no estilo "R": vira "há 5 minutos" no fuso de quem lê e atualiza sozinho.
+function relativeTime(ms: number) {
+  return `<t:${Math.floor(ms / 1000)}:R>`;
 }

@@ -26,14 +26,18 @@ export function kinetic(title, area) {
     frame ??= requestAnimationFrame(render);
   });
 
+  // Lê a posição de todas as letras antes de mexer em qualquer uma: ler depois de escrever obrigaria o navegador
+  // a recalcular o layout a cada letra.
   function render() {
     frame = null;
-    letters.forEach((letter) => {
+    const pulls = letters.map((letter) => {
       const box = letter.getBoundingClientRect();
       const distance = pointer ? Math.hypot(pointer.x - (box.left + box.width / 2), pointer.y - (box.top + box.height / 2)) : Infinity;
-      const pull = Math.max(0, 1 - distance / REACH_PX);
-      letter.style.fontVariationSettings = `"wght" ${Math.round(HEAVY - (HEAVY - LIGHT) * pull)}`;
-      letter.style.transform = `translateY(${-pull * 14}px)`;
+      return Math.max(0, 1 - distance / REACH_PX);
+    });
+    letters.forEach((letter, index) => {
+      letter.style.fontVariationSettings = `"wght" ${Math.round(HEAVY - (HEAVY - LIGHT) * pulls[index])}`;
+      letter.style.transform = `translateY(${-pulls[index] * 14}px)`;
     });
   }
 }

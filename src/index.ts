@@ -7,21 +7,21 @@ import { iceServers } from "./turn";
 export { Room } from "./room";
 
 type Params = Record<string, string | undefined>;
-type Handler = (request: Request, env: Env, params: Params) => Response | Promise<Response>;
+type Handler = (request: Request, env: Env, params: Params, ctx: ExecutionContext) => Response | Promise<Response>;
 
 const routes: { method: string; pattern: URLPattern; handle: Handler }[] = [
-  { method: "POST", pattern: new URLPattern({ pathname: "/interactions" }), handle: handleInteraction },
+  { method: "POST", pattern: new URLPattern({ pathname: "/interactions" }), handle: (request, env, _params, ctx) => handleInteraction(request, env, ctx) },
   { method: "GET", pattern: new URLPattern({ pathname: `/r/:room(${ROOM_ID_PATTERN})` }), handle: serveRoomPage },
   { method: "GET", pattern: new URLPattern({ pathname: `/api/rooms/:room(${ROOM_ID_PATTERN})/ws` }), handle: connectToRoom },
   { method: "GET", pattern: new URLPattern({ pathname: `/api/rooms/:room(${ROOM_ID_PATTERN})` }), handle: serveRoomConfig },
 ];
 
 export default {
-  fetch(request, env) {
+  fetch(request, env, ctx) {
     const route = routes.find((r) => r.method === request.method && r.pattern.test(request.url));
     if (!route) return new Response("Not found", { status: 404 });
 
-    return route.handle(request, env, route.pattern.exec(request.url)!.pathname.groups);
+    return route.handle(request, env, route.pattern.exec(request.url)!.pathname.groups, ctx);
   },
 } satisfies ExportedHandler<Env>;
 

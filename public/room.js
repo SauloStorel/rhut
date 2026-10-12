@@ -1,12 +1,13 @@
 // Uma pessoa compartilha a tela (host) e manda uma conexão WebRTC para cada pessoa assistindo (viewer);
 // qualquer um pode ligar a câmera. Uma conexão só com a sala troca a "apresentação" WebRTC e avisa quem está lá.
+// Este arquivo monta a página; assistir e transmitir moram em watch.js e broadcast.js.
 
+import { broadcast } from "./broadcast.js";
 import { audioWarning, captureScreen } from "./capture.js";
 import { createCameras } from "./cameras.js";
 import { hardwareFirstCodecs } from "./codecs.js";
-import { DELAY_HINT, createReceiveMeter, sendingQuality } from "./diagnostics.js";
-import { withStereoOpus } from "./opus.js";
-import { DEFAULT_QUALITY, QUALITY_PRESETS, applyQuality, tuneSender } from "./quality.js";
+import { createPeer } from "./peer.js";
+import { DEFAULT_QUALITY, QUALITY_PRESETS } from "./quality.js";
 import { connectRoom } from "./signaling.js";
 import { accentFromIcon, inkFor } from "./ui/accent.js";
 import { createCameraStrip } from "./ui/camera-strip.js";
@@ -16,10 +17,12 @@ import { createPlayer } from "./ui/player.js";
 import { createPresence } from "./ui/presence.js";
 import { createShareGuide } from "./ui/share-guide.js";
 import { showToast } from "./ui/toast.js";
+import { watch } from "./watch.js";
 
-const STATS_INTERVAL_MS = 2000;
 const WARNING_MS = 9000;
 const FALLBACK_ACCENT = "#5865f2";
+// Sem a configuração da sala (rede instável, erro no servidor) a página ainda funciona: sem a marca do servidor e só com STUN.
+const FALLBACK_CONFIG = { iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }], guild: null, accentColor: "auto" };
 
 const roomId = location.pathname.split("/").pop();
 const canShare = Boolean(navigator.mediaDevices?.getDisplayMedia);
@@ -28,6 +31,7 @@ const preferences = safeStorage(() => localStorage);
 const tabStorage = safeStorage(() => sessionStorage);
 
 const statusText = document.querySelector("#status");
+const connectionBadge = document.querySelector("#connection");
 const shareButton = document.querySelector("#share");
 const stopButton = document.querySelector("#stop");
 const cameraButton = document.querySelector("#camera-toggle");
@@ -41,6 +45,7 @@ const SHARE_INVITE = canShare ? " Para transmitir, escolha a qualidade e clique 
 // O que a tela mostra quando não tem vídeo, e quais controles ficam disponíveis em cada caso.
 const IDLE_SCREENS = {
   waiting: { title: "Ninguém está transmitindo ainda", hint: `Quando alguém compartilhar a tela, a imagem aparece aqui sozinha.${SHARE_INVITE}`, pulse: true, controls: "idle" },
+  connecting: { title: "Conectando à transmissão", hint: "A imagem aparece aqui em alguns segundos.", pulse: true, controls: "watching" },
   ended: { title: "A transmissão terminou", hint: `Fique por aqui: se alguém compartilhar de novo, aparece automaticamente.${SHARE_INVITE}`, pulse: true, controls: "idle" },
   closed: { title: "Sala encerrada", hint: "Abra outra com /live no Discord.", pulse: false, controls: "none" },
 };
@@ -54,35 +59,46 @@ const CONTROLS = {
   none: { share: false, quality: false, stop: false, camera: false },
 };
 
-const { iceServers, guild, accentColor } = await fetch(`/api/rooms/${roomId}`).then((response) => response.json());
+const { iceServers, guild, accentColor } = await fetch(`/api/rooms/${roomId}`)
+  .then((response) => (response.ok ? response.json() : FALLBACK_CONFIG))
+  .catch(() => FALLBACK_CONFIG);
 showBranding(guild);
 applyAccent(guild, accentColor);
 
 // Daqui até registrar os handlers não pode ter `await`: as primeiras mensagens da sala chegam logo após conectar.
-const signaling = connectRoom({ roomId, pass: takePass() });
+const signaling = connectRoom({ roomId, pass: takePass(), resume: resumeToken(), onStatus: (status) => (connectionBadge.hidden = status !== "reconnecting") });
+const newPeer = (sendCandidate) => createPeer(iceServers, sendCandidate);
 const player = createPlayer(stage, { preferences });
 const presence = createPresence();
 const cameraStrip = createCameraStrip();
-const cameras = createCameras({ signaling, createPeer, onChange: renderCameras });
+const cameras = createCameras({ signaling, createPeer: newPeer, onChange: renderCameras });
 const codecPreferences = hardwareFirstCodecs();
 const qualityPickerControl = setupQualityPicker();
 let idleScreen = "waiting";
+let myPeerId = null;
 let hostPeerId = null;
 const shareGuide = createShareGuide({ stage, preferences, onContinue: startSharing, onCancel: () => showIdle(idleScreen) });
 
+// O que assistir e transmitir precisam da página.
+const screen = { idle: showIdle, controls: showControls, status: showStatus, renderCameras, current: () => idleScreen };
+
 // Mensagens que valem para a página inteira, assistindo ou transmitindo.
 signaling.on({
-  welcome: ({ you }) => presence.setMe(you),
+  welcome: ({ you, peerId }) => {
+    myPeerId = peerId;
+    presence.setMe(you);
+  },
   presence: ({ people }) => {
     const host = presence.update(people);
     hostPeerId = host?.peerId ?? null;
     player.setHost(host);
     cameras.sync(people);
+    session.hostChanged?.(hostPeerId === myPeerId ? null : host);
   },
   "room-closed": showRoomClosed,
 });
 
-let session = watch();
+let session = startWatching();
 
 shareButton.addEventListener("click", () => {
   if (shareGuide.open()) showControls("guide");
@@ -103,7 +119,7 @@ async function startSharing() {
   if (!stream) return showIdle(idleScreen);
 
   session.close();
-  session = broadcast(stream, quality);
+  session = broadcast(stream, quality, { signaling, createPeer: newPeer, player, screen, codecPreferences, onStop: switchToWatching });
 
   const warning = audioWarning(stream);
   if (warning) warn(warning);
@@ -111,127 +127,11 @@ async function startSharing() {
 
 function switchToWatching() {
   session.close();
-  session = watch();
+  session = startWatching();
 }
 
-function watch() {
-  let peer = null;
-  let measure = null;
-  showIdle("waiting");
-
-  const statsTimer = setInterval(async () => {
-    if (measure) player.setQuality(await measure(), DELAY_HINT);
-  }, STATS_INTERVAL_MS);
-
-  const stopListening = signaling.on({
-    offer: async ({ description }) => {
-      peer?.close();
-      peer = createPeer((candidate) => signaling.send({ type: "candidate", candidate }));
-      measure = createReceiveMeter(peer);
-      peer.addEventListener("track", ({ streams: [stream] }) => {
-        player.watch(stream);
-        showControls("watching");
-        renderCameras();
-      });
-
-      await peer.setRemoteDescription(description);
-      const answer = await peer.createAnswer();
-      await peer.setLocalDescription({ type: "answer", sdp: withStereoOpus(answer.sdp) });
-      signaling.send({ type: "answer", description: peer.localDescription });
-    },
-    candidate: ({ candidate }) => peer?.addIceCandidate(candidate),
-    "host-left": () => {
-      peer?.close();
-      peer = null;
-      measure = null;
-      showIdle("ended");
-    },
-  });
-
-  return {
-    close() {
-      clearInterval(statsTimer);
-      stopListening();
-      peer?.close();
-    },
-  };
-}
-
-function broadcast(stream, initialQuality) {
-  const peers = new Map();
-  const [videoTrack] = stream.getVideoTracks();
-  let quality = initialQuality;
-  let active = true;
-
-  const refreshStatus = async () => {
-    const sending = await sendingQuality([...peers.values()]);
-    const watching = peers.size === 1 ? "1 pessoa assistindo" : `${peers.size} pessoas assistindo`;
-    // Uma leitura que terminou depois do "Parar" não pode sobrescrever o status novo.
-    if (!active) return;
-
-    player.setQuality(sending?.label);
-    showStatus([watching, sending && `${sending.label} ${sending.codec}`, sending?.hint].filter(Boolean).join(" · "));
-  };
-  const statsTimer = setInterval(refreshStatus, STATS_INTERVAL_MS);
-
-  refreshStatus();
-  player.preview(stream);
-  showControls("broadcasting");
-  videoTrack.contentHint = quality.contentHint;
-
-  const stopListening = signaling.on({
-    "viewer-joined": async ({ id }) => {
-      const peer = createPeer((candidate) => signaling.send({ type: "candidate", to: id, candidate }));
-      const transceiver = peer.addTransceiver(videoTrack, { direction: "sendonly", streams: [stream] });
-      transceiver.setCodecPreferences(await codecPreferences);
-      stream.getAudioTracks().forEach((track) => peer.addTrack(track, stream));
-      peers.set(id, peer);
-      refreshStatus();
-
-      await peer.setLocalDescription();
-      await tuneSender(transceiver.sender, quality);
-      signaling.send({ type: "offer", to: id, description: peer.localDescription });
-    },
-    answer: ({ from, description }) => peers.get(from)?.setRemoteDescription(description),
-    candidate: ({ from, candidate }) => peers.get(from)?.addIceCandidate(candidate),
-    "viewer-left": ({ id }) => {
-      peers.get(id)?.close();
-      peers.delete(id);
-      refreshStatus();
-    },
-    error: ({ message }) => {
-      switchToWatching();
-      showStatus(message);
-    },
-  });
-  signaling.send({ type: "start-broadcast" });
-
-  // Usuário clicou em "Parar de compartilhar" na barra do navegador.
-  videoTrack.addEventListener("ended", switchToWatching);
-
-  return {
-    setQuality(preset) {
-      quality = preset;
-      const videoSenders = [...peers.values()].map((peer) => peer.getSenders().find((sender) => sender.track === videoTrack));
-      applyQuality(preset, videoTrack, videoSenders).catch((error) => showStatus(`Não deu pra trocar a qualidade: ${error.message}`));
-    },
-    close() {
-      active = false;
-      clearInterval(statsTimer);
-      stopListening();
-      signaling.send({ type: "stop-broadcast" });
-      stream.getTracks().forEach((track) => track.stop());
-      peers.forEach((peer) => peer.close());
-    },
-  };
-}
-
-function createPeer(sendCandidate) {
-  const peer = new RTCPeerConnection({ iceServers });
-  peer.addEventListener("icecandidate", ({ candidate }) => {
-    if (candidate) sendCandidate(candidate);
-  });
-  return peer;
+function startWatching() {
+  return watch({ signaling, createPeer: newPeer, player, screen });
 }
 
 // A câmera de quem está transmitindo vira a facecam sobre a tela; as outras vão para a faixa.
@@ -337,6 +237,17 @@ function takePass() {
     tabStorage.set(storageKey, fromUrl);
   }
   return fromUrl ?? tabStorage.get(storageKey);
+}
+
+// O segredo de reconexão sobrevive a recarregar a página: quem recarrega volta como a mesma pessoa em vez de
+// aparecer duplicado até a sala desistir da conexão antiga (o navegador nem sempre avisa que a página saiu).
+// Só na recarga: uma aba duplicada (que copia o sessionStorage) entra como outra pessoa.
+function resumeToken() {
+  const storageKey = `resume:${roomId}`;
+  const isReload = performance.getEntriesByType("navigation")[0]?.type === "reload";
+  const token = (isReload && tabStorage.get(storageKey)) || crypto.randomUUID();
+  tabStorage.set(storageKey, token);
+  return token;
 }
 
 const CAMERA_ERRORS = {

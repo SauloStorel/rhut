@@ -5,11 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>rhut</title>
   <link rel="icon" href="/favicon.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap">
+  <link rel="preload" href="/onest.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/style.css">
   <script type="module" src="/room.js"></script>
+  <!-- Os módulos chegam todos de uma vez, em vez de em cascata (room.js → player.js → ambient.js). -->
+  <link rel="modulepreload" href="/broadcast.js">
+  <link rel="modulepreload" href="/watch.js">
+  <link rel="modulepreload" href="/signaling.js">
+  <link rel="modulepreload" href="/peer.js">
+  <link rel="modulepreload" href="/cameras.js">
+  <link rel="modulepreload" href="/capture.js">
+  <link rel="modulepreload" href="/codecs.js">
+  <link rel="modulepreload" href="/diagnostics.js">
+  <link rel="modulepreload" href="/opus.js">
+  <link rel="modulepreload" href="/quality.js">
+  <link rel="modulepreload" href="/ui/accent.js">
+  <link rel="modulepreload" href="/ui/ambient.js">
+  <link rel="modulepreload" href="/ui/camera-strip.js">
+  <link rel="modulepreload" href="/ui/dom.js">
+  <link rel="modulepreload" href="/ui/dropdown.js">
+  <link rel="modulepreload" href="/ui/player.js">
+  <link rel="modulepreload" href="/ui/presence.js">
+  <link rel="modulepreload" href="/ui/share-guide.js">
+  <link rel="modulepreload" href="/ui/sound.js">
+  <link rel="modulepreload" href="/ui/toast.js">
 </head>
 <body>
   <svg hidden>
@@ -39,6 +58,7 @@
         </span>
         <span class="brand-name" id="brand-name">rhut</span>
       </div>
+      <span class="connection" id="connection" role="status" hidden>Reconectando…</span>
       <div class="presence" id="presence" hidden>
         <ul class="avatar-stack" id="avatar-stack" aria-label="Quem está na sala"></ul>
         <span class="presence-count" id="presence-count"></span>

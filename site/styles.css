@@ -384,6 +384,16 @@ img { display: block; max-width: 100%; height: auto; }
 
 .dc-card-ephemeral { background: linear-gradient(rgb(88 101 242 / 0.08), rgb(88 101 242 / 0.08)), #313338; }
 
+/* O canal depois que a sala fecha: o lugar do aviso, vazio. */
+.dc-card-cleared {
+  justify-content: center;
+  align-items: center;
+  border: 1px dashed rgb(255 255 255 / 0.14);
+  background: #2b2d31;
+}
+
+.dc-cleared { max-width: 26ch; color: #949ba4; text-align: center; }
+
 .dc-command { display: flex; align-items: center; gap: 6px; padding-left: 42px; color: #949ba4; font-size: 12px; }
 .dc-command b { color: #c4c9ce; font-weight: 600; }
 
@@ -440,7 +450,6 @@ img { display: block; max-width: 100%; height: auto; }
 
 .dc-embed[data-color="open"] { --bar: #5865f2; }
 .dc-embed[data-color="live"] { --bar: #da373c; }
-.dc-embed[data-color="closed"] { --bar: #4e5058; }
 
 .dc-author { display: flex; align-items: center; gap: 6px; color: #f2f3f5; font-size: 12px; font-weight: 600; }
 

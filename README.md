@@ -12,7 +12,7 @@ O compartilhamento de tela do próprio Discord limita a qualidade para quem não
 
 ## O que tem
 
-- **Comando `/live`**: cria a sala e posta um aviso no canal que acompanha o estado dela (aberta, ao vivo, encerrada). No fim, o aviso mostra o horário e o pico de pessoas assistindo.
+- **Comando `/live`**: cria a sala e posta um aviso no canal que acompanha o estado dela (aberta, ao vivo). Quando a sala fecha, o aviso sai do canal, então avisos velhos não se acumulam na conversa. Quem digita o comando não recebe confirmação nenhuma: o próprio aviso é a confirmação, e só aparece mensagem se der erro.
 - **Só o som do jogo**: compartilhando a janela do jogo, vai só o áudio dela, em estéreo a 128 kbps. Antes de abrir a escolha do navegador, a página mostra um passo a passo rápido.
 - **Qualidade ajustável**: 720p30, 1080p30, 1080p60 e um modo "Texto nítido" para código e slides. Dá para trocar no meio da transmissão, sem reconectar ninguém.
 - **Diagnóstico real**: quem transmite vê a resolução, o FPS e o codec que estão saindo de verdade, e um aviso quando a CPU ou o upload estão no limite. Quem assiste vê o atraso estimado.
@@ -36,7 +36,8 @@ O compartilhamento de tela do próprio Discord limita a qualidade para quem não
 - **Uma sala, um Durable Object**: ele faz só a apresentação entre os navegadores (offer, answer e candidates) e guarda o estado do aviso. O vídeo nunca passa por ele.
 - **Identidade sem login**: o botão "Entrar na sala" já diz ao bot quem clicou. O bot responde, só para essa pessoa, com um link assinado (HMAC) que vale para aquela sala por 12 horas. Quem abre o link sem passar pelo botão entra como "Convidado".
 - **Codec em hardware**: como quem transmite codifica uma cópia para cada pessoa, a página põe na frente o codec que a GPU consegue codificar (AV1, H.264 ou VP9).
-- **Fechamento automático**: a sala vazia por 15 minutos fecha sozinha e atualiza o aviso no canal.
+- **Fechamento automático**: a sala vazia por 15 minutos fecha sozinha e tira o aviso do canal.
+- **Quedas rápidas não derrubam a sala**: se a conexão de alguém cair (Wi-Fi oscilou, celular trocou de rede, página recarregada), a página reconecta sozinha e a sala espera até 20 segundos antes de dar a pessoa como saída. Se quem transmite volta nesse tempo, a transmissão continua para todo mundo. Se a conexão de vídeo cair, quem assiste pede uma nova automaticamente.
 
 ## Instalação
 

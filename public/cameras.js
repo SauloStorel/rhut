@@ -1,28 +1,40 @@
+import { addCandidate, onFailure } from "./peer.js";
+
 // Câmeras de todo mundo, em P2P: cada câmera ligada manda uma conexão só de ida para cada pessoa da sala.
 // 360p e sem microfone (a voz já está no Discord), então 5 câmeras ainda pesam pouco no upload.
 const CAMERA_CONSTRAINTS = { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 24, max: 30 } };
 const CAMERA_BITRATE = 400_000;
+const RETRY_MS = 3000;
 
 export function createCameras({ signaling, createPeer, onChange }) {
   const sending = new Map(); // peerId → { peer } da minha câmera para essa pessoa
   const receiving = new Map(); // peerId → { peer, stream } da câmera dessa pessoa para mim
   let myPeerId = null;
   let local = null;
+  let starting = null;
   let people = [];
 
   signaling.on({
-    welcome: ({ peerId }) => (myPeerId = peerId),
+    // Ao voltar, a sala pode lembrar de uma câmera que não está mais ligada (página recarregada) ou ter esquecido
+    // a que está (a volta demorou); reafirma o estado real.
+    welcome: ({ peerId, resumed }) => {
+      myPeerId = peerId;
+      if (resumed || local) signaling.send({ type: "camera", on: Boolean(local) });
+    },
     "cam-offer": receive,
-    "cam-answer": ({ from, description }) => sending.get(from)?.peer.setRemoteDescription(description),
+    "cam-answer": ({ from, description }) => sending.get(from)?.peer.setRemoteDescription(description).catch(() => {}),
     // `owner` diz de quem é a câmera, para achar a conexão certa quando as duas pessoas estão com a câmera ligada.
-    "cam-candidate": ({ from, owner, candidate }) => connectionWith(from, owner)?.addIceCandidate(candidate),
+    "cam-candidate": ({ from, owner, candidate }) => addCandidate(connectionWith(from, owner), candidate),
   });
 
   return {
     isOn: () => Boolean(local),
 
+    // Dois cliques rápidos não abrem a câmera duas vezes (a primeira ficaria ligada sem ninguém para desligar).
     async turnOn() {
-      local = await navigator.mediaDevices.getUserMedia({ video: CAMERA_CONSTRAINTS, audio: false });
+      if (local || starting) return;
+      starting = navigator.mediaDevices.getUserMedia({ video: CAMERA_CONSTRAINTS, audio: false }).finally(() => (starting = null));
+      local = await starting;
       signaling.send({ type: "camera", on: true });
       others().forEach((person) => sendTo(person.peerId));
       onChange();
@@ -63,6 +75,7 @@ export function createCameras({ signaling, createPeer, onChange }) {
       peer.addTransceiver(track, { direction: "sendonly", streams: [local], sendEncodings: [{ maxBitrate: CAMERA_BITRATE }] }),
     );
     sending.set(peerId, { peer });
+    onFailure(peer, () => setTimeout(() => retrySend(peerId, peer), RETRY_MS));
 
     await peer.setLocalDescription();
     signaling.send({ type: "cam-offer", to: peerId, description: peer.localDescription });
@@ -81,6 +94,13 @@ export function createCameras({ signaling, createPeer, onChange }) {
     await peer.setRemoteDescription(description);
     await peer.setLocalDescription();
     signaling.send({ type: "cam-answer", to: from, description: peer.localDescription });
+  }
+
+  // A conexão da minha câmera com essa pessoa caiu: abre outra, se a câmera e a pessoa ainda estiverem aí.
+  function retrySend(peerId, failed) {
+    if (!local || sending.get(peerId)?.peer !== failed || !personOf(peerId)) return;
+    failed.close();
+    sendTo(peerId);
   }
 
   function connectionWith(peerId, owner) {

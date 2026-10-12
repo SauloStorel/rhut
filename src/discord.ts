@@ -1,4 +1,5 @@
 import { CLOSE_ROOM_ACTION, JOIN_ROOM_ACTION, personalLink } from "./announcement";
+import { discordApi } from "./discord-api";
 import { fetchGuild } from "./guild";
 import { type DiscordMember, type DiscordUser, profileOf, signPass } from "./identity";
 import { roomStub } from "./room";
@@ -6,12 +7,14 @@ import { newRoomId } from "./room-id";
 
 // https://discord.com/developers/docs/interactions/receiving-and-responding
 const InteractionType = { PING: 1, APPLICATION_COMMAND: 2, MESSAGE_COMPONENT: 3 } as const;
-const ResponseType = { PONG: 1, CHANNEL_MESSAGE: 4, DEFERRED_UPDATE_MESSAGE: 6 } as const;
+const ResponseType = { PONG: 1, CHANNEL_MESSAGE: 4, DEFERRED_CHANNEL_MESSAGE: 5, DEFERRED_UPDATE_MESSAGE: 6 } as const;
 const EPHEMERAL = 1 << 6;
 const PUBLIC_KEY_PATTERN = /^[0-9a-f]{64}$/i;
 
 type Interaction = {
   type: number;
+  application_id: string;
+  token: string;
   guild_id?: string;
   channel_id: string;
   data?: { name?: string; custom_id?: string };
@@ -19,27 +22,44 @@ type Interaction = {
   user?: DiscordUser;
 };
 
-type Responder = (interaction: Interaction, request: Request, env: Env) => Promise<object | undefined> | object | undefined;
+type Responder = (interaction: Interaction, request: Request, env: Env, ctx: ExecutionContext) => Promise<object | undefined> | object | undefined;
 
 const commands: Record<string, Responder> = {
-  // O aviso é postado pelo bot (e não como resposta do comando) porque resposta de comando
-  // só pode ser editada por 15 minutos, e o aviso acompanha a sala enquanto ela existir.
-  live: async (interaction, request, env) => {
-    const roomId = newRoomId();
-    const posted = await roomStub(env, roomId).open({
-      roomId,
-      guild: await fetchGuild(interaction.guild_id, env),
-      openerId: userIdOf(interaction),
-      channelId: interaction.channel_id,
-    });
-
-    return privateReply(
-      posted
-        ? "Sala criada. O aviso está no canal."
-        : "Não consegui postar o aviso neste canal. Confira se o bot pode **ver o canal**, **enviar mensagens** e **inserir links** aqui.",
-    );
+  // O Discord desiste de esperar a resposta em 3 s, e abrir a sala (buscar o servidor, postar o aviso) passa
+  // disso quando o Worker acorda frio. Responde "pensando..." na hora e resolve a resposta quando a sala estiver pronta.
+  live: (interaction, _request, env, ctx) => {
+    ctx.waitUntil(openRoom(interaction, env));
+    return { type: ResponseType.DEFERRED_CHANNEL_MESSAGE, data: { flags: EPHEMERAL } };
   },
 };
+
+const CANNOT_POST =
+  "Não consegui postar o aviso neste canal. Confira se o bot pode **ver o canal**, **enviar mensagens** e **inserir links** aqui.";
+const UNEXPECTED_ERROR = "Não consegui abrir a sala agora. Tente o /live de novo em instantes.";
+
+// Deu certo: o próprio aviso no canal é a confirmação, e o "pensando..." some sem deixar mensagem.
+// Deu errado: o "pensando..." vira o motivo, só para quem digitou o comando.
+async function openRoom(interaction: Interaction, env: Env) {
+  const problem = await problemOpeningRoom(interaction, env).catch((error) => {
+    console.error("Não deu para abrir a sala:", error);
+    return UNEXPECTED_ERROR;
+  });
+  const path = `/webhooks/${interaction.application_id}/${interaction.token}/messages/@original`;
+  await (problem ? discordApi(env, "PATCH", path, { content: problem }) : discordApi(env, "DELETE", path));
+}
+
+// O aviso é postado pelo bot (e não como resposta do comando) porque resposta de comando
+// só pode ser editada por 15 minutos, e o aviso acompanha a sala enquanto ela existir.
+async function problemOpeningRoom(interaction: Interaction, env: Env) {
+  const roomId = newRoomId();
+  const posted = await roomStub(env, roomId).open({
+    roomId,
+    guild: await fetchGuild(interaction.guild_id, env),
+    openerId: userIdOf(interaction),
+    channelId: interaction.channel_id,
+  });
+  return posted ? null : CANNOT_POST;
+}
 
 type ComponentHandler = (interaction: Interaction, request: Request, env: Env, roomId: string) => Promise<object>;
 
@@ -62,19 +82,19 @@ const components: Record<string, ComponentHandler> = {
 
 const responders: Record<number, Responder> = {
   [InteractionType.PING]: () => ({ type: ResponseType.PONG }),
-  [InteractionType.APPLICATION_COMMAND]: (interaction, request, env) => commands[interaction.data!.name!]?.(interaction, request, env),
+  [InteractionType.APPLICATION_COMMAND]: (interaction, request, env, ctx) => commands[interaction.data!.name!]?.(interaction, request, env, ctx),
   [InteractionType.MESSAGE_COMPONENT]: (interaction, request, env) => {
     const [action, roomId] = interaction.data!.custom_id!.split(":");
     return components[action]?.(interaction, request, env, roomId);
   },
 };
 
-export async function handleInteraction(request: Request, env: Env) {
+export async function handleInteraction(request: Request, env: Env, ctx: ExecutionContext) {
   const body = await request.text();
   if (!(await isSignedByDiscord(request, body, env.DISCORD_PUBLIC_KEY))) return new Response("Bad signature", { status: 401 });
 
   const interaction: Interaction = JSON.parse(body);
-  const response = await responders[interaction.type]?.(interaction, request, env);
+  const response = await responders[interaction.type]?.(interaction, request, env, ctx);
 
   return response ? Response.json(response) : new Response("Unsupported interaction", { status: 400 });
 }

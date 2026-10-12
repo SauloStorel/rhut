@@ -1,3 +1,10 @@
+@font-face {
+  font-family: "Onest";
+  src: url("/onest.woff2") format("woff2");
+  font-weight: 400 800;
+  font-display: swap;
+}
+
 :root {
   --bg: #111214;
   --surface: #1a1b1e;
@@ -103,6 +110,29 @@ button { font: inherit; color: inherit; }
 }
 
 /* ---------- Presença ---------- */
+
+/* Aparece só enquanto a conexão com a sala está caída e a página tenta voltar. */
+.connection {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.connection::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: blink 1.6s ease-in-out infinite;
+}
 
 .presence {
   display: flex;
@@ -496,8 +526,7 @@ video {
   justify-self: start;
   padding: 5px 10px 5px 9px;
   border-radius: 999px;
-  background: rgb(17 18 20 / 0.72);
-  backdrop-filter: blur(12px);
+  background: rgb(17 18 20 / 0.86);
   font-size: 13px;
   font-weight: 600;
 }
@@ -543,8 +572,7 @@ video {
   padding: 12px 20px;
   border: 0;
   border-radius: 999px;
-  background: rgb(17 18 20 / 0.78);
-  backdrop-filter: blur(12px);
+  background: rgb(17 18 20 / 0.9);
   box-shadow: var(--shadow-pop);
   font-weight: 600;
   cursor: pointer;
