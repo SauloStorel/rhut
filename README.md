@@ -105,7 +105,7 @@ Sem TURN, a conexão direta funciona na maioria das redes. Se alguém atrás de 
 | Variável | Onde | Para que serve |
 |---|---|---|
 | `DISCORD_PUBLIC_KEY` | secret | Confere se as chamadas vêm mesmo do Discord |
-| `DISCORD_BOT_TOKEN` | secret | Posta e edita o aviso no canal, lê nome e ícone do servidor |
+| `DISCORD_BOT_TOKEN` | secret | Posta, edita e apaga o aviso e o painel no canal, lê nome e ícone do servidor |
 | `SESSION_SECRET` | secret | Assina os links pessoais da sala |
 | `TURN_KEY_ID`, `TURN_KEY_API_TOKEN` | secret, opcional | Credenciais temporárias de TURN |
 | `ACCENT_COLOR` | `wrangler.jsonc` | `"auto"` tira a cor do ícone do servidor (só na página). Um hex fixo, como `"#e5242b"`, vale também para o aviso no Discord |

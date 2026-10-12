@@ -501,7 +501,14 @@ img { display: block; max-width: 100%; height: auto; }
 
 .dc-primary { background: #5865f2; }
 .dc-danger { background: #da373c; }
-.dc-link { background: #4e5058; }
+.dc-link, .dc-secondary { background: #4e5058; }
+.dc-success { background: #248046; }
+
+.dc-rows { display: grid; gap: 6px; }
+
+.panel-split { margin-top: clamp(88px, 12vw, 150px); }
+
+.dc-card-panel { width: 100%; max-width: 440px; justify-self: center; }
 
 .dc-text { color: #dbdee1; }
 .dc-only { color: #949ba4; font-size: 11px; }
