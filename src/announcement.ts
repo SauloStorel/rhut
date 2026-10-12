@@ -1,4 +1,4 @@
-import { ButtonStyle, CLOSE_ROOM_ACTION, JOIN_ROOM_ACTION, LIVE_RED, embedColor, escapeMarkdown, guildAuthor, relativeTime, row } from "./discord-ui";
+import { ButtonStyle, CLOSE_ROOM_ACTION, LIVE_RED, callButtons, embedColor, escapeMarkdown, guildAuthor, joinButton, relativeTime, roomDetails, row } from "./discord-ui";
 import type { OpenStatus, RoomInfo } from "./room";
 
 // Aviso que o bot posta no canal (quando o servidor não tem painel) e vai editando conforme a sala muda de estado.
@@ -21,11 +21,15 @@ const views: Record<OpenStatus, (info: RoomInfo, accentColor: number) => View> =
 };
 
 export function announcement(info: RoomInfo & { status: OpenStatus }, accentColor: string) {
+  const view = views[info.status](info, embedColor(accentColor));
+  const details = roomDetails(info.status, info).join(" · ");
+
   return {
-    embeds: [{ ...views[info.status](info, embedColor(accentColor)), author: guildAuthor(info.guild) }],
+    embeds: [{ ...view, description: [view.description, details].filter(Boolean).join("\n"), author: guildAuthor(info.guild) }],
     components: [
       row(
-        { style: ButtonStyle.PRIMARY, label: "Entrar na sala", custom_id: `${JOIN_ROOM_ACTION}:${info.roomId}` },
+        joinButton(info, "Entrar na sala"),
+        ...callButtons(info),
         { style: ButtonStyle.DANGER, label: "Fechar sala", custom_id: `${CLOSE_ROOM_ACTION}:${info.roomId}` },
       ),
     ],
@@ -33,7 +37,7 @@ export function announcement(info: RoomInfo & { status: OpenStatus }, accentColo
   };
 }
 
-// Link pessoal que o bot manda (só para quem clicou) depois do "Entrar na sala".
+// Link pessoal que o bot manda (só para quem clicou) depois do "Entrar na sala", quando não há login pelo Discord.
 export function personalLink(url: string) {
   return {
     content: "Seu link pessoal para a sala. Ele mostra seu nome e avatar para quem estiver lá, então não repasse.",

@@ -27,8 +27,8 @@ type Responder = (interaction: Interaction, request: Request, env: Env, ctx: Exe
 // Abrir sala ou postar o painel passa dos 3 s que o Discord espera quando o Worker acorda frio. Os comandos
 // respondem "pensando..." na hora (só para quem digitou) e resolvem essa resposta quando terminam.
 const commands: Record<string, Responder> = {
-  live: (interaction, _request, env, ctx) => {
-    ctx.waitUntil(openRoom(openerOf(interaction), env).then((message) => finishThinking(interaction, env, message)));
+  live: (interaction, request, env, ctx) => {
+    ctx.waitUntil(openRoom(openerOf(interaction, request), env).then((message) => finishThinking(interaction, env, message)));
     return { type: ResponseType.DEFERRED_CHANNEL_MESSAGE, data: { flags: EPHEMERAL } };
   },
   painel: (interaction, _request, env, ctx) => {
@@ -55,8 +55,8 @@ const components: Record<string, ComponentHandler> = {
       : privateReply("Só quem está na sala pode fechar. Entre pelo botão **Entrar na sala** e tente de novo.");
   },
   // "Abrir sala" do painel: o clique não gera mensagem (o painel ganha a linha nova); só um problema vira aviso.
-  [OPEN_ROOM_ACTION]: (interaction, _request, env, ctx) => {
-    ctx.waitUntil(openRoom(openerOf(interaction), env).then((message) => followUp(interaction, env, message)));
+  [OPEN_ROOM_ACTION]: (interaction, request, env, ctx) => {
+    ctx.waitUntil(openRoom(openerOf(interaction, request), env).then((message) => followUp(interaction, env, message)));
     return { type: ResponseType.DEFERRED_UPDATE_MESSAGE };
   },
 };
@@ -99,8 +99,8 @@ function userOf(interaction: Interaction) {
   return (interaction.member?.user ?? interaction.user)!;
 }
 
-function openerOf(interaction: Interaction): Opener {
-  return { guildId: interaction.guild_id, channelId: interaction.channel_id, user: userOf(interaction), member: interaction.member };
+function openerOf(interaction: Interaction, request: Request): Opener {
+  return { guildId: interaction.guild_id, channelId: interaction.channel_id, user: userOf(interaction), member: interaction.member, origin: request.url };
 }
 
 function privateReply(content: string) {

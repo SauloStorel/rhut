@@ -224,18 +224,17 @@ function setupQualityPicker() {
   return { value: () => current };
 }
 
-// O passe vem no link pessoal do Discord (?pass=...). Guarda na aba e tira da URL,
-// para que copiar o endereço da barra não leve a identidade junto.
+// O passe vem no link pessoal do Discord (?pass=...). Guarda na aba e tira da URL, junto com o ?convidado de quem
+// cancelou o login: copiar o endereço da barra não leva a identidade de ninguém nem pula o login de quem recebe.
 function takePass() {
   const url = new URL(location.href);
   const fromUrl = url.searchParams.get("pass");
   const storageKey = `pass:${roomId}`;
 
-  if (fromUrl) {
-    url.searchParams.delete("pass");
-    history.replaceState(null, "", url);
-    tabStorage.set(storageKey, fromUrl);
-  }
+  if (fromUrl) tabStorage.set(storageKey, fromUrl);
+  url.searchParams.delete("pass");
+  url.searchParams.delete("convidado");
+  history.replaceState(null, "", url);
   return fromUrl ?? tabStorage.get(storageKey);
 }
 

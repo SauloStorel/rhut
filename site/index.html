@@ -118,8 +118,9 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
                     <p class="dc-author"><span class="dc-server">SG</span>Sua galera</p>
                     <p class="dc-title">Sala aberta</p>
                     <p class="dc-desc"><span class="dc-mention">@Bia</span> abriu uma sala. Clique em <b>Entrar na sala</b>.</p>
+                    <p class="dc-desc">na call <span class="dc-mention">#Geral</span></p>
                   </div>
-                  <div class="dc-buttons"><span class="dc-btn dc-primary">Entrar na sala</span><span class="dc-btn dc-danger">Fechar sala</span></div>
+                  <div class="dc-buttons"><span class="dc-btn dc-link">Entrar na sala</span><span class="dc-btn dc-link">Ir para a call</span><span class="dc-btn dc-danger">Fechar sala</span></div>
                 </div>
               </div>
             </div>
@@ -128,19 +129,15 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           </li>
 
           <li class="flow-step">
-            <div class="dc-card dc-card-ephemeral" data-tilt aria-hidden="true">
-              <div class="dc-msg">
-                <span class="dc-avatar"><svg><use href="#i-symbol"/></svg></span>
-                <div class="dc-body">
-                  <p class="dc-head"><strong>rhut</strong><span class="dc-tag">APP</span><span class="dc-time">Hoje às 21:05</span></p>
-                  <p class="dc-text">Seu link pessoal para a sala. Ele mostra seu nome e avatar para quem estiver lá, então não repasse.</p>
-                  <div class="dc-buttons"><span class="dc-btn dc-link">Abrir transmissão</span></div>
-                  <p class="dc-only">Só você pode ver esta mensagem</p>
-                </div>
-              </div>
+            <div class="dc-card dc-card-auth" data-tilt aria-hidden="true">
+              <div class="dc-auth-faces"><span class="dc-avatar"><svg><use href="#i-symbol"/></svg></span><span class="dc-auth-dots"></span><span class="dc-mini dc-auth-me">B</span></div>
+              <p class="dc-auth-title">rhut quer acessar sua conta</p>
+              <p class="dc-auth-scope">Saber seu nome de usuário e avatar</p>
+              <div class="dc-buttons"><span class="dc-btn dc-link">Cancelar</span><span class="dc-btn dc-primary">Autorizar</span></div>
+              <p class="dc-only">Só na primeira vez</p>
             </div>
             <h3>A galera clica em Entrar na sala</h3>
-            <p>Cada pessoa recebe um link só dela, e a sala abre no navegador com o nome e a foto do Discord.</p>
+            <p>A sala abre direto no navegador, com o nome e a foto do servidor. Na primeira vez, o Discord pergunta se o rhut pode saber quem é você.</p>
           </li>
 
           <li class="flow-step">
@@ -155,11 +152,12 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
                       <div>
                         <p class="dc-title">Ao vivo agora</p>
                         <p class="dc-desc"><b>Bia</b> está transmitindo desde <span class="dc-stamp">há 2 minutos</span>.</p>
+                        <p class="dc-desc">3 assistindo · na call <span class="dc-mention">#Geral</span></p>
                       </div>
                       <span class="dc-thumb">B</span>
                     </div>
                   </div>
-                  <div class="dc-buttons"><span class="dc-btn dc-primary">Entrar na sala</span><span class="dc-btn dc-danger">Fechar sala</span></div>
+                  <div class="dc-buttons"><span class="dc-btn dc-link">Entrar na sala</span><span class="dc-btn dc-link">Ir para a call</span><span class="dc-btn dc-danger">Fechar sala</span></div>
                 </div>
               </div>
             </div>
@@ -192,12 +190,12 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
                 <div class="dc-embed" data-color="live">
                   <p class="dc-author"><span class="dc-server">SG</span>Sua galera</p>
                   <p class="dc-title">Salas</p>
-                  <p class="dc-desc"><b>Ao vivo</b> · Bia transmitindo desde <span class="dc-stamp">há 12 minutos</span></p>
-                  <p class="dc-desc"><b>Aberta</b> · sala de Léo, esperando alguém transmitir</p>
+                  <p class="dc-desc"><b>Ao vivo</b> · Bia transmitindo desde <span class="dc-stamp">há 12 minutos</span> · 3 assistindo · na call <span class="dc-mention">#Geral</span></p>
+                  <p class="dc-desc"><b>Aberta</b> · sala de Léo, esperando alguém transmitir · 1 na sala · na call <span class="dc-mention">#Jogos</span></p>
                 </div>
                 <div class="dc-rows">
-                  <div class="dc-buttons"><span class="dc-btn dc-primary">Entrar · Bia</span><span class="dc-btn dc-secondary">Fechar</span></div>
-                  <div class="dc-buttons"><span class="dc-btn dc-primary">Entrar · sala de Léo</span><span class="dc-btn dc-secondary">Fechar</span></div>
+                  <div class="dc-buttons"><span class="dc-btn dc-link">Entrar · Bia</span><span class="dc-btn dc-link">Ir para a call</span><span class="dc-btn dc-secondary">Fechar</span></div>
+                  <div class="dc-buttons"><span class="dc-btn dc-link">Entrar · sala de Léo</span><span class="dc-btn dc-link">Ir para a call</span><span class="dc-btn dc-secondary">Fechar</span></div>
                   <div class="dc-buttons"><span class="dc-btn dc-success">Abrir sala</span></div>
                 </div>
               </div>
@@ -274,8 +272,8 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
           <p>Quem transmite aparece numa bolinha sobre a tela. A galera fica na faixa de baixo.</p>
         </li>
         <li>
-          <h3>Nome e foto do Discord</h3>
-          <p>Cada pessoa aparece como no servidor, com aviso de quem entrou e de quem começou a transmitir.</p>
+          <h3>Um clique e você tá dentro</h3>
+          <p>O Entrar abre a sala direto, com o seu nome e a sua foto do servidor. A galera vê quem entrou e quem começou a transmitir.</p>
         </li>
         <li>
           <h3>Números de verdade</h3>
@@ -295,7 +293,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
         </li>
         <li>
           <h3>Painel de salas</h3>
-          <p>Um canal com todas as salas abertas e o botão pra abrir outra, atualizado sozinho.</p>
+          <p>Um canal com todas as salas abertas, quem tá assistindo, o atalho pra call e o botão pra abrir outra.</p>
         </li>
         <li>
           <h3>Canal sem bagunça</h3>

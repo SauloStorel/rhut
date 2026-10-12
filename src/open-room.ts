@@ -1,6 +1,7 @@
-import { fetchGuild } from "./guild";
+import { fetchGuild, voiceChannelOf } from "./guild";
 import { type DiscordMember, type DiscordUser, profileOf } from "./identity";
 import { lobbyStub } from "./lobby";
+import { oauthEnabled } from "./oauth";
 import { roomStub } from "./room";
 import { newRoomId } from "./room-id";
 
@@ -8,7 +9,8 @@ import { newRoomId } from "./room-id";
 // que dizer a quem pediu, só para essa pessoa, ou null quando não há nada a dizer: a sala ou o painel
 // aparecendo no Discord já é a confirmação.
 
-export type Opener = { guildId?: string; channelId: string; user: DiscordUser; member?: DiscordMember };
+// `origin` é o endereço do Worker, de onde sai o link direto da sala.
+export type Opener = { guildId?: string; channelId: string; user: DiscordUser; member?: DiscordMember; origin: string };
 
 const CANNOT_POST = "Não consegui postar neste canal. Confira se o bot pode **ver o canal**, **enviar mensagens** e **inserir links** aqui.";
 const UNEXPECTED_ERROR = "Algo deu errado do nosso lado. Tente de novo em instantes.";
@@ -22,17 +24,19 @@ export function installPanel(guildId: string, channelId: string, env: Env) {
 }
 
 // Com painel no servidor, a sala vira uma linha nele, de onde quer que o /live tenha sido digitado.
-async function tryOpening({ guildId, channelId, user, member }: Opener, env: Env) {
+async function tryOpening({ guildId, channelId, user, member, origin }: Opener, env: Env) {
   const panelChannelId = guildId ? await lobbyStub(env, guildId).panelChannel() : null;
   const roomId = newRoomId();
   const shown = await roomStub(env, roomId).open({
     roomId,
     guildId: guildId ?? null,
-    guild: await fetchGuild(guildId, env),
+    guild: await fetchGuild(env, guildId),
     openerId: user.id,
     openerName: profileOf(user, member, guildId).name,
     channelId,
     board: panelChannelId ? "panel" : "channel",
+    pageUrl: oauthEnabled(env) ? new URL(`/r/${roomId}`, origin).href : null,
+    voiceChannelId: await voiceChannelOf(env, guildId ?? null, user.id),
   });
   if (!shown) return CANNOT_POST;
 
@@ -41,7 +45,7 @@ async function tryOpening({ guildId, channelId, user, member }: Opener, env: Env
 }
 
 async function tryInstalling(guildId: string, channelId: string, env: Env) {
-  const installed = await lobbyStub(env, guildId).install(channelId, await fetchGuild(guildId, env));
+  const installed = await lobbyStub(env, guildId).install(channelId, await fetchGuild(env, guildId));
   return installed ? null : CANNOT_POST;
 }
 

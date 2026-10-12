@@ -511,6 +511,14 @@ img { display: block; max-width: 100%; height: auto; }
 
 .dc-rows { display: grid; gap: 6px; }
 
+/* Tela de autorização do Discord (OAuth), como aparece na primeira vez que alguém entra. */
+.dc-card-auth { align-items: center; justify-content: center; gap: 10px; text-align: center; }
+.dc-auth-faces { display: flex; align-items: center; gap: 10px; }
+.dc-auth-dots { width: 22px; border-top: 2px dotted #4e5058; }
+.dc-auth-me { width: 32px; height: 32px; font-size: 13px; }
+.dc-auth-title { color: #f2f3f5; font-size: 15px; font-weight: 700; }
+.dc-auth-scope { color: #b5bac1; }
+
 .panel-split { margin-top: clamp(88px, 12vw, 150px); }
 
 .dc-card-panel { width: 100%; max-width: 440px; justify-self: center; }
