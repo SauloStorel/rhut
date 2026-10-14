@@ -20,6 +20,7 @@ import { showToast } from "./ui/toast.js";
 import { watch } from "./watch.js";
 
 const WARNING_MS = 9000;
+const CLOSE_TAB_DELAY_MS = 3000;
 const FALLBACK_ACCENT = "#5865f2";
 // Sem a configuração da sala (rede instável, erro no servidor) a página ainda funciona: sem a marca do servidor e só com STUN.
 const FALLBACK_CONFIG = { iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }], guild: null, accentColor: "auto" };
@@ -48,6 +49,7 @@ const IDLE_SCREENS = {
   connecting: { title: "Conectando à transmissão", hint: "A imagem aparece aqui em alguns segundos.", pulse: true, controls: "watching" },
   ended: { title: "A transmissão terminou", hint: `Fique por aqui: se alguém compartilhar de novo, aparece automaticamente.${SHARE_INVITE}`, pulse: true, controls: "idle" },
   closed: { title: "Sala encerrada", hint: "Abra outra com /live no Discord.", pulse: false, controls: "none" },
+  closing: { title: "Sala encerrada", hint: "Esta aba fecha sozinha em instantes.", pulse: false, controls: "none" },
 };
 
 // Quem está só assistindo não vê "Compartilhar tela": já tem alguém transmitindo e o servidor recusaria.
@@ -146,11 +148,22 @@ function renderCameras() {
 }
 
 // Sala fechada pelo Discord (botão "Fechar sala") ou por ficar vazia: não tem mais o que fazer aqui.
+// Quem estava na sala tem a aba fechada; quem abriu o link de uma sala já encerrada só vê o aviso.
 function showRoomClosed() {
   session.close();
   session = { close() {} };
   if (cameras.isOn()) cameras.turnOff();
-  showIdle("closed");
+  if (!myPeerId) return showIdle("closed");
+
+  showIdle("closing");
+  setTimeout(closeTab, CLOSE_TAB_DELAY_MS);
+}
+
+// O navegador só deixa fechar a aba aberta por um link que não navegou depois (voltar do login do Discord conta
+// como navegar). Quando recusa, a aba continua aberta mostrando a sala encerrada.
+function closeTab() {
+  window.close();
+  setTimeout(() => showIdle("closed"), CLOSE_TAB_DELAY_MS);
 }
 
 function showIdle(screen) {

@@ -1,14 +1,15 @@
+import { playChime } from "./chime.js";
 import { avatar, element } from "./dom.js";
 import { showToast } from "./toast.js";
 
 const MAX_AVATARS = 5;
 
-// Avatares de quem está na sala e avisos de "entrou" / "começou a transmitir".
+// Avatares de quem está na sala e avisos de "entrou" / "começou a transmitir", com som ao entrar e sair.
 export function createPresence() {
   const root = document.querySelector("#presence");
   const stack = document.querySelector("#avatar-stack");
   const count = document.querySelector("#presence-count");
-  const seen = new Set();
+  let present = new Set();
   let me = null;
   let host = null;
   let firstUpdate = true;
@@ -22,11 +23,12 @@ export function createPresence() {
     update(people) {
       const everyone = uniqueById(people);
       const nextHost = everyone.find((person) => person.role === "host") ?? null;
+      const nextPresent = new Set(everyone.map((person) => person.id));
 
       renderStack(everyone);
-      if (!firstUpdate) announceChanges(everyone, nextHost);
+      if (!firstUpdate) announceChanges(everyone, nextPresent, nextHost);
 
-      everyone.forEach((person) => seen.add(person.id));
+      present = nextPresent;
       host = nextHost;
       firstUpdate = false;
       return host;
@@ -50,10 +52,14 @@ export function createPresence() {
     root.hidden = everyone.length === 0;
   }
 
-  function announceChanges(everyone, nextHost) {
-    everyone
-      .filter((person) => !seen.has(person.id) && person.id !== me?.id)
-      .forEach((person) => toast(person, "entrou na sala"));
+  // Quem cai por instabilidade continua na lista por um tempo (o servidor espera a volta), então não soa.
+  function announceChanges(everyone, nextPresent, nextHost) {
+    const arrivals = everyone.filter((person) => !present.has(person.id) && person.id !== me?.id);
+    const someoneLeft = [...present].some((id) => !nextPresent.has(id) && id !== me?.id);
+
+    arrivals.forEach((person) => toast(person, "entrou na sala"));
+    if (arrivals.length > 0) playChime("join");
+    if (someoneLeft) playChime("leave");
 
     if (nextHost && nextHost.id !== host?.id && nextHost.id !== me?.id) toast(nextHost, "começou a transmitir");
   }
