@@ -100,12 +100,12 @@ export class Room extends DurableObject<Env> {
     await this.ctx.storage.put(`profile:${profile.id}`, profile);
   }
 
-  // Só quem está conectado na sala (entrou pelo "Entrar na sala") pode fechar. Responde na hora e fecha em seguida:
-  // o clique no Discord precisa de resposta em 3 s, e atualizar o Discord pode esperar um limite de taxa.
-  async requestClose(userId: string) {
-    const isInRoom = this.members().some((ws) => peerOf(ws)!.profile.id === userId);
-    if (isInRoom) this.ctx.waitUntil(this.close());
-    return isInRoom;
+  // Fecha quem está conectado na sala (entrou pelo "Entrar na sala") ou é admin do servidor. Responde na hora e fecha
+  // em seguida: o clique no Discord precisa de resposta em 3 s, e atualizar o Discord pode esperar um limite de taxa.
+  async requestClose(userId: string, isAdmin: boolean) {
+    const canClose = isAdmin || this.members().some((ws) => peerOf(ws)!.profile.id === userId);
+    if (canClose) this.ctx.waitUntil(this.close());
+    return canClose;
   }
 
   async info() {

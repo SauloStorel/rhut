@@ -24,6 +24,13 @@ export function profileOf(user: DiscordUser, member: DiscordMember | undefined, 
   return { id: user.id, name: member?.nick || user.global_name || user.username, avatarUrl: guildAvatar || userAvatar || defaultAvatar };
 }
 
+// O Discord manda as permissões de quem clicou já resolvidas no canal; dono do servidor vem com todas.
+const ADMINISTRATOR = 1n << 3n;
+
+export function isAdmin(member: DiscordMember | undefined) {
+  return (BigInt(member?.permissions ?? 0) & ADMINISTRATOR) === ADMINISTRATOR;
+}
+
 export const SESSION_MAX_AGE_SECONDS = SESSION_TTL_SECONDS;
 
 export function signPass(env: Env, roomId: string, userId: string) {

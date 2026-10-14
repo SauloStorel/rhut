@@ -1,7 +1,7 @@
 import { personalLink } from "./announcement";
 import { discordApi } from "./discord-api";
 import { CLOSE_ROOM_ACTION, JOIN_ROOM_ACTION, OPEN_ROOM_ACTION } from "./discord-ui";
-import { type DiscordMember, type DiscordUser, profileOf, signPass } from "./identity";
+import { type DiscordMember, type DiscordUser, isAdmin, profileOf, signPass } from "./identity";
 import { type Opener, installPanel, openRoom } from "./open-room";
 import { roomStub } from "./room";
 
@@ -49,10 +49,10 @@ const components: Record<string, ComponentHandler> = {
     return { type: ResponseType.CHANNEL_MESSAGE, data: { ...personalLink(url.href), flags: EPHEMERAL } };
   },
   [CLOSE_ROOM_ACTION]: async (interaction, _request, env, _ctx, roomId) => {
-    const closed = await roomStub(env, roomId).requestClose(userOf(interaction).id);
+    const closed = await roomStub(env, roomId).requestClose(userOf(interaction).id, isAdmin(interaction.member));
     return closed
       ? { type: ResponseType.DEFERRED_UPDATE_MESSAGE }
-      : privateReply("Só quem está na sala pode fechar. Entre pelo botão **Entrar na sala** e tente de novo.");
+      : privateReply("Só quem está na sala ou é admin do servidor pode fechar. Entre pelo botão **Entrar na sala** e tente de novo.");
   },
   // "Abrir sala" do painel: o clique não gera mensagem (o painel ganha a linha nova); só um problema vira aviso.
   [OPEN_ROOM_ACTION]: (interaction, request, env, ctx) => {

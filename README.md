@@ -40,6 +40,7 @@ O compartilhamento de tela do próprio Discord limita a qualidade para quem não
 - **Uma sala, um Durable Object**: ele faz só a apresentação entre os navegadores (offer, answer e candidates) e guarda o estado do aviso. O vídeo nunca passa por ele.
 - **Identidade**: com o login pelo Discord ligado, o **Entrar** é um link direto. Na primeira vez a pessoa autoriza o rhut (só o escopo `identify`) e ganha um cookie assinado (HMAC) que vale 30 dias; nome e avatar do servidor vêm do bot. Sem o login ligado, o botão "Entrar na sala" diz ao bot quem clicou, e ele responde só para essa pessoa com um link assinado que vale para aquela sala por 12 horas. Quem abre a sala sem nenhum dos dois (link copiado, cancelou a autorização) entra como "Convidado".
 - **Codec em hardware**: como quem transmite codifica uma cópia para cada pessoa, a página põe na frente o codec que a GPU consegue codificar (AV1, H.264 ou VP9).
+- **Quem fecha a sala**: o botão **Fechar sala** (ou **Fechar**, no painel) funciona para quem está conectado na sala e para admins do servidor, mesmo de fora dela.
 - **Fechamento automático**: a sala vazia por 15 minutos fecha sozinha e tira o aviso do canal.
 - **Quedas rápidas não derrubam a sala**: se a conexão de alguém cair (Wi-Fi oscilou, celular trocou de rede, página recarregada), a página reconecta sozinha e a sala espera até 20 segundos antes de dar a pessoa como saída. Se quem transmite volta nesse tempo, a transmissão continua para todo mundo. Se a conexão de vídeo cair, quem assiste pede uma nova automaticamente.
 
