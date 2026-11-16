@@ -52,6 +52,22 @@ export function broadcast(stream, initialQuality, { signaling, createPeer, playe
   // Usuário clicou em "Parar de compartilhar" na barra do navegador.
   videoTrack.addEventListener("ended", onStop);
 
+  // No iPhone o Safari pausa a captura quando vai para segundo plano (o vídeo "congela" em vez de acabar).
+  // Avisa em vez de deixar parecer que travou, e a imagem volta sozinha quando o sistema liberar de novo.
+  videoTrack.addEventListener("mute", () => active && screen.status("Transmissão pausada: o sistema pausa a captura quando o navegador fica em segundo plano. Volte para o navegador para continuar."));
+  videoTrack.addEventListener("unmute", () => active && refreshStatus());
+
+  // Mantém a tela do celular acesa enquanto transmite (a tela apagada também pausa a captura) e pede o bloqueio
+  // de novo ao voltar para a aba, porque o navegador o solta sempre que a aba some.
+  let wakeLock = null;
+  const keepAwake = async () => {
+    if (!active || document.visibilityState !== "visible" || wakeLock) return;
+    wakeLock = await navigator.wakeLock?.request("screen").catch(() => null);
+    wakeLock?.addEventListener("release", () => (wakeLock = null));
+  };
+  document.addEventListener("visibilitychange", keepAwake);
+  keepAwake();
+
   async function connect(id) {
     peers.get(id)?.close();
     const peer = createPeer((candidate) => signaling.send({ type: "candidate", to: id, candidate }));
@@ -86,6 +102,8 @@ export function broadcast(stream, initialQuality, { signaling, createPeer, playe
     close() {
       active = false;
       clearInterval(statsTimer);
+      document.removeEventListener("visibilitychange", keepAwake);
+      wakeLock?.release().catch(() => {});
       stopListening();
       signaling.send({ type: "stop-broadcast" });
       stream.getTracks().forEach((track) => track.stop());
