@@ -19,6 +19,7 @@ export function createCameraStrip() {
         const tile = tiles.get(camera.peerId) ?? createTile(camera);
         tiles.set(camera.peerId, tile);
         tile.querySelector("figcaption").textContent = camera.self ? "Você" : camera.person.name;
+        tile.toggleAttribute("data-mirrored", Boolean(camera.mirrored));
         const video = tile.querySelector("video");
         if (video.srcObject !== camera.stream) video.srcObject = camera.stream;
 

@@ -686,7 +686,7 @@ video {
 }
 
 /* A própria câmera aparece espelhada, como num espelho de verdade. */
-.camera-tile[data-self] video { transform: scaleX(-1); }
+.camera-tile[data-mirrored] video { transform: scaleX(-1); }
 
 .camera-tile figcaption {
   position: absolute;

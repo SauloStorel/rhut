@@ -35,6 +35,7 @@ const connectionBadge = document.querySelector("#connection");
 const shareButton = document.querySelector("#share");
 const stopButton = document.querySelector("#stop");
 const cameraButton = document.querySelector("#camera-toggle");
+const flipButton = document.querySelector("#camera-flip");
 const qualityPicker = document.querySelector("#quality-picker");
 const dock = document.querySelector("#dock");
 const idle = document.querySelector("#idle");
@@ -113,6 +114,10 @@ cameraButton.addEventListener("click", async () => {
   await cameras.turnOn().catch((error) => warn(`Não deu para ligar a câmera: ${cameraError(error)}`));
 });
 
+flipButton.addEventListener("click", () =>
+  cameras.flip().catch((error) => warn(`Não deu para virar a câmera: ${cameraError(error)}`)),
+);
+
 async function startSharing() {
   const quality = QUALITY_PRESETS[qualityPickerControl.value()];
   const stream = await captureScreen(quality).catch(() => null);
@@ -143,6 +148,7 @@ function renderCameras() {
   cameraButton.setAttribute("aria-pressed", String(on));
   cameraButton.setAttribute("aria-label", on ? "Desligar câmera" : "Ligar câmera");
   setIcon(cameraButton.querySelector("svg"), on ? "camera-off" : "camera");
+  cameras.canFlip().then((canFlip) => (flipButton.hidden = !(on && canFlip && !cameraButton.hidden)));
 }
 
 // Sala fechada pelo Discord (botão "Fechar sala") ou por ficar vazia: não tem mais o que fazer aqui.
@@ -171,6 +177,7 @@ function showControls(mode) {
   qualityPicker.hidden = !quality;
   stopButton.hidden = !stop;
   cameraButton.hidden = !camera;
+  if (!camera) flipButton.hidden = true;
   dock.hidden = !(share || quality || stop || camera);
 }
 

@@ -2,7 +2,8 @@ import { addCandidate, onFailure } from "./peer.js";
 
 // Câmeras de todo mundo, em P2P: cada câmera ligada manda uma conexão só de ida para cada pessoa da sala.
 // 360p e sem microfone (a voz já está no Discord), então 5 câmeras ainda pesam pouco no upload.
-const CAMERA_CONSTRAINTS = { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 24, max: 30 } };
+const CAMERA_SIZE = { width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 24, max: 30 } };
+const OTHER_SIDE = { user: "environment", environment: "user" };
 const CAMERA_BITRATE = 400_000;
 const RETRY_MS = 3000;
 
@@ -11,6 +12,8 @@ export function createCameras({ signaling, createPeer, onChange }) {
   const receiving = new Map(); // peerId → { peer, stream } da câmera dessa pessoa para mim
   let myPeerId = null;
   let local = null;
+  let facing = "user"; // "user" = câmera da frente, "environment" = câmera de trás
+  let flipping = false;
   let starting = null;
   let people = [];
 
@@ -29,11 +32,38 @@ export function createCameras({ signaling, createPeer, onChange }) {
 
   return {
     isOn: () => Boolean(local),
+    isMirrored: () => facing === "user",
+
+    // Só faz sentido oferecer o botão quando o aparelho tem mais de uma câmera (celular, tablet).
+    async canFlip() {
+      if (!local) return false;
+      const devices = await navigator.mediaDevices.enumerateDevices().catch(() => []);
+      return devices.filter((device) => device.kind === "videoinput").length > 1;
+    },
+
+    // Troca entre a câmera da frente e a de trás sem desligar: a conexão de cada pessoa continua, só muda a imagem.
+    async flip() {
+      if (!local || flipping) return;
+      flipping = true;
+      try {
+        const next = OTHER_SIDE[facing];
+        const stream = await openCamera(next);
+        const [track] = stream.getVideoTracks();
+        const senders = [...sending.values()].flatMap(({ peer }) => peer.getSenders().filter((sender) => sender.track?.kind === "video"));
+        await Promise.all(senders.map((sender) => sender.replaceTrack(track).catch(() => {})));
+        local.getTracks().forEach((old) => old.stop());
+        local = stream;
+        facing = next;
+        onChange();
+      } finally {
+        flipping = false;
+      }
+    },
 
     // Dois cliques rápidos não abrem a câmera duas vezes (a primeira ficaria ligada sem ninguém para desligar).
     async turnOn() {
       if (local || starting) return;
-      starting = navigator.mediaDevices.getUserMedia({ video: CAMERA_CONSTRAINTS, audio: false }).finally(() => (starting = null));
+      starting = openCamera(facing).finally(() => (starting = null));
       local = await starting;
       signaling.send({ type: "camera", on: true });
       others().forEach((person) => sendTo(person.peerId));
@@ -41,6 +71,7 @@ export function createCameras({ signaling, createPeer, onChange }) {
     },
 
     turnOff() {
+      facing = "user";
       local?.getTracks().forEach((track) => track.stop());
       local = null;
       closeAll(sending);
@@ -63,7 +94,7 @@ export function createCameras({ signaling, createPeer, onChange }) {
 
     // O que a interface mostra: minha câmera primeiro, depois a de cada pessoa.
     tiles() {
-      const mine = local ? [{ peerId: myPeerId, person: personOf(myPeerId), stream: local, self: true }] : [];
+      const mine = local ? [{ peerId: myPeerId, person: personOf(myPeerId), stream: local, self: true, mirrored: facing === "user" }] : [];
       const theirs = [...receiving].map(([peerId, { stream }]) => ({ peerId, person: personOf(peerId), stream, self: false }));
       return [...mine, ...theirs].filter((tile) => tile.person && tile.stream);
     },
@@ -114,6 +145,10 @@ export function createCameras({ signaling, createPeer, onChange }) {
   function personOf(peerId) {
     return people.find((person) => person.peerId === peerId);
   }
+}
+
+function openCamera(facingMode) {
+  return navigator.mediaDevices.getUserMedia({ video: { ...CAMERA_SIZE, facingMode: { ideal: facingMode } }, audio: false });
 }
 
 function closeWhere(links, shouldClose) {
