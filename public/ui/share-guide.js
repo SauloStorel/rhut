@@ -26,5 +26,9 @@ export function createShareGuide({ stage, preferences, onContinue, onCancel }) {
       continueButton.focus();
       return true;
     },
+
+    close() {
+      stage.dataset.screen = "message";
+    },
   };
 }

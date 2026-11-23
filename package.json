@@ -14,7 +14,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --var DEV_ROOMS:on",
     "deploy": "wrangler deploy",
     "typecheck": "tsc --noEmit",
     "register": "node --env-file=.env scripts/register-commands.mjs"

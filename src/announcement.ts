@@ -1,4 +1,4 @@
-import { ButtonStyle, CLOSE_ROOM_ACTION, LIVE_RED, callButtons, embedColor, escapeMarkdown, guildAuthor, joinButton, relativeTime, roomDetails, row } from "./discord-ui";
+import { ButtonStyle, CLOSE_ROOM_ACTION, LIVE_RED, callButtons, embedColor, guildAuthor, joinButton, roomDetails, row, sharingSentence } from "./discord-ui";
 import type { OpenStatus, RoomInfo } from "./room";
 
 // Aviso que o bot posta no canal (quando o servidor não tem painel) e vai editando conforme a sala muda de estado.
@@ -12,12 +12,10 @@ const views: Record<OpenStatus, (info: RoomInfo, accentColor: number) => View> =
     description: `<@${info.openerId}> abriu uma sala. Clique em **Entrar na sala**. Quem for transmitir clica em **Compartilhar tela** lá dentro.`,
     color: accentColor,
   }),
-  live: (info) => ({
-    title: "Ao vivo agora",
-    description: `**${escapeMarkdown(info.host?.name ?? "Alguém")}** está transmitindo desde ${relativeTime(info.liveSince!)}.`,
-    color: LIVE_RED,
-    thumbnail: info.host?.avatarUrl ? { url: info.host.avatarUrl } : undefined,
-  }),
+  live: (info) => {
+    const avatarUrl = info.sharers?.[0]?.avatarUrl;
+    return { title: "Ao vivo agora", description: `${sharingSentence(info.sharers, info.liveSince!)}.`, color: LIVE_RED, thumbnail: avatarUrl ? { url: avatarUrl } : undefined };
+  },
 };
 
 export function announcement(info: RoomInfo & { status: OpenStatus }, accentColor: string) {
@@ -43,4 +41,9 @@ export function personalLink(url: string) {
     content: "Seu link pessoal para a sala. Ele mostra seu nome e avatar para quem estiver lá, então não repasse.",
     components: [row({ style: ButtonStyle.LINK, label: "Abrir transmissão", url })],
   };
+}
+
+// Link da sala (com login pelo Discord), para quem escolheu a sala no menu do painel.
+export function roomLink(url: string) {
+  return { content: "Aqui está a sala.", components: [row({ style: ButtonStyle.LINK, label: "Abrir transmissão", url })] };
 }

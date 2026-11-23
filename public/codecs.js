@@ -1,4 +1,4 @@
-// Em P2P o host codifica o vídeo uma vez por pessoa assistindo, então encoder em hardware (GPU) faz muita diferença.
+// Em P2P quem transmite codifica o vídeo uma vez por pessoa assistindo, então encoder em hardware (GPU) faz muita diferença.
 // Coloca na frente o primeiro codec que o navegador diz ser "powerEfficient"; sem nenhum, mantém a ordem padrão.
 const HARDWARE_CANDIDATES = ["video/AV1", "video/H264", "video/VP9"];
 

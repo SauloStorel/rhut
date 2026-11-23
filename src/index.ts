@@ -3,12 +3,15 @@ import { verifyPass } from "./identity";
 import { handleOAuthCallback, sessionUserId, signInIfNeeded } from "./oauth";
 import { USER_HEADER, roomStub } from "./room";
 import { ROOM_ID_PATTERN } from "./room-id";
+import { SESSION_ACTIONS, createSfuSession, sfuEnabled, updateSfuSession } from "./sfu";
 import { iceServers } from "./turn";
 
 export { Lobby } from "./lobby";
 export { Room } from "./room";
 
 type Params = Record<string, string | undefined>;
+
+const SFU_ACTIONS = Object.keys(SESSION_ACTIONS).join("|");
 type Handler = (request: Request, env: Env, params: Params, ctx: ExecutionContext) => Response | Promise<Response>;
 
 const routes: { method: string; pattern: URLPattern; handle: Handler }[] = [
@@ -17,6 +20,8 @@ const routes: { method: string; pattern: URLPattern; handle: Handler }[] = [
   { method: "GET", pattern: new URLPattern({ pathname: "/auth/callback" }), handle: handleOAuthCallback },
   { method: "GET", pattern: new URLPattern({ pathname: `/api/rooms/:room(${ROOM_ID_PATTERN})/ws` }), handle: connectToRoom },
   { method: "GET", pattern: new URLPattern({ pathname: `/api/rooms/:room(${ROOM_ID_PATTERN})` }), handle: serveRoomConfig },
+  { method: "POST", pattern: new URLPattern({ pathname: `/api/rooms/:room(${ROOM_ID_PATTERN})/sfu/sessions` }), handle: createSfuSession },
+  { method: "POST", pattern: new URLPattern({ pathname: `/api/rooms/:room(${ROOM_ID_PATTERN})/sfu/:action(${SFU_ACTIONS})` }), handle: updateSfuSession },
 ];
 
 export default {
@@ -44,8 +49,8 @@ async function connectToRoom(request: Request, env: Env, { room }: Params) {
   return roomStub(env, room!).fetch(new Request(request, { headers }));
 }
 
-// Tudo que a página da sala precisa para começar: marca do servidor, cor e servidores ICE.
+// Tudo que a página da sala precisa para começar: marca do servidor, cor, servidores ICE e se as telas vão pelo SFU.
 async function serveRoomConfig(_request: Request, env: Env, { room }: Params) {
   const [info, ice] = await Promise.all([roomStub(env, room!).info(), iceServers(env)]);
-  return Response.json({ guild: info?.guild ?? null, accentColor: env.ACCENT_COLOR, ...ice });
+  return Response.json({ guild: info?.guild ?? null, accentColor: env.ACCENT_COLOR, sfu: sfuEnabled(env), ...ice });
 }

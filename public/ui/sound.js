@@ -43,7 +43,13 @@ export function createSound(onChange) {
       muted = false;
       apply();
     },
+
+    state: snapshot,
   };
+
+  function snapshot() {
+    return { muted, volume, hasAudio: Boolean(output) };
+  }
 
   function apply() {
     if (output) {
@@ -51,6 +57,6 @@ export function createSound(onChange) {
       // O AudioContext nasce suspenso pelo autoplay; o clique em "Ativar som" é o gesto que libera.
       if (!muted) output.context.resume();
     }
-    onChange({ muted, volume, hasAudio: Boolean(output) });
+    onChange(snapshot());
   }
 }

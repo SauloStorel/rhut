@@ -10,4 +10,8 @@ interface Env {
   DISCORD_CLIENT_SECRET?: string;
   TURN_KEY_ID?: string;
   TURN_KEY_API_TOKEN?: string;
+  REALTIME_APP_ID?: string;
+  REALTIME_APP_TOKEN?: string;
+  // "on" deixa qualquer link /r/<id> abrir uma sala, sem /live; só para desenvolvimento.
+  DEV_ROOMS?: string;
 }

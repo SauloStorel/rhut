@@ -1,6 +1,6 @@
-import { personalLink } from "./announcement";
+import { personalLink, roomLink } from "./announcement";
 import { discordApi } from "./discord-api";
-import { CLOSE_ROOM_ACTION, JOIN_ROOM_ACTION, OPEN_ROOM_ACTION } from "./discord-ui";
+import { CLOSE_ROOM_ACTION, JOIN_ROOM_ACTION, OPEN_ROOM_ACTION, PICK_ROOM_ACTION } from "./discord-ui";
 import { type DiscordMember, type DiscordUser, isAdmin, profileOf, signPass } from "./identity";
 import { type Opener, installPanel, openRoom } from "./open-room";
 import { roomStub } from "./room";
@@ -17,7 +17,7 @@ type Interaction = {
   token: string;
   guild_id?: string;
   channel_id: string;
-  data?: { name?: string; custom_id?: string };
+  data?: { name?: string; custom_id?: string; values?: string[] };
   member?: DiscordMember;
   user?: DiscordUser;
 };
@@ -48,6 +48,14 @@ const components: Record<string, ComponentHandler> = {
     url.searchParams.set("pass", await signPass(env, roomId, user.id));
     return { type: ResponseType.CHANNEL_MESSAGE, data: { ...personalLink(url.href), flags: EPHEMERAL } };
   },
+  // Menu "Entrar em outra sala" do painel. Menu não abre link, então a resposta
+  // (só para quem escolheu) traz o botão: o link direto, com login pelo Discord, ou o link pessoal, sem.
+  [PICK_ROOM_ACTION]: async (interaction, request, env, ctx, roomId) => {
+    const pageUrl = (await roomStub(env, roomId).info())?.pageUrl;
+    if (!pageUrl) return components[JOIN_ROOM_ACTION](interaction, request, env, ctx, roomId);
+
+    return { type: ResponseType.CHANNEL_MESSAGE, data: { ...roomLink(pageUrl), flags: EPHEMERAL } };
+  },
   [CLOSE_ROOM_ACTION]: async (interaction, _request, env, _ctx, roomId) => {
     const closed = await roomStub(env, roomId).requestClose(userOf(interaction).id, isAdmin(interaction.member));
     return closed
@@ -64,9 +72,10 @@ const components: Record<string, ComponentHandler> = {
 const responders: Record<number, Responder> = {
   [InteractionType.PING]: () => ({ type: ResponseType.PONG }),
   [InteractionType.APPLICATION_COMMAND]: (interaction, request, env, ctx) => commands[interaction.data!.name!]?.(interaction, request, env, ctx),
+  // A sala vem no custom_id do botão ("join-room:<sala>") ou, num menu, na opção escolhida.
   [InteractionType.MESSAGE_COMPONENT]: (interaction, request, env, ctx) => {
     const [action, roomId] = interaction.data!.custom_id!.split(":");
-    return components[action]?.(interaction, request, env, ctx, roomId);
+    return components[action]?.(interaction, request, env, ctx, roomId ?? interaction.data!.values?.[0] ?? "");
   },
 };
 
