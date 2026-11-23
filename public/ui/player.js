@@ -1,5 +1,6 @@
 import { createAmbient } from "./ambient.js";
 import { setIcon } from "./dom.js";
+import { fullscreenElement, onFullscreenChange, toggleFullscreen } from "./fullscreen.js";
 import { MAX_VOLUME, createSound } from "./sound.js";
 
 // Controles próprios do vídeo. Dois modos:
@@ -35,11 +36,10 @@ export function createPlayer(stage, { preferences }) {
     syncAmbient();
   });
 
-  fullscreenToggle.addEventListener("click", toggleFullscreen);
-  video.addEventListener("dblclick", toggleFullscreen);
-
-  document.addEventListener("fullscreenchange", syncFullscreen);
-  document.addEventListener("webkitfullscreenchange", syncFullscreen);
+  const toggleStageFullscreen = () => toggleFullscreen(stage, video);
+  fullscreenToggle.addEventListener("click", toggleStageFullscreen);
+  video.addEventListener("dblclick", toggleStageFullscreen);
+  onFullscreenChange(syncFullscreen);
 
   stage.addEventListener("pointermove", revealControls);
   stage.addEventListener("focusin", revealControls);
@@ -69,17 +69,8 @@ export function createPlayer(stage, { preferences }) {
     else ambient.stop();
   }
 
-  // Safari antigo só tem a versão com prefixo webkit; no iPhone nenhum elemento da página entra em tela cheia,
-  // só o próprio <video>, com o player do sistema.
-  function toggleFullscreen() {
-    if (fullscreenElement()) return (document.exitFullscreen ?? document.webkitExitFullscreen).call(document);
-
-    const enter = stage.requestFullscreen ?? stage.webkitRequestFullscreen;
-    return enter ? enter.call(stage) : video.webkitEnterFullscreen?.();
-  }
-
   function syncFullscreen() {
-    const fullscreen = Boolean(fullscreenElement());
+    const fullscreen = fullscreenElement() === stage;
     setIcon(fullscreenToggle.querySelector("svg"), fullscreen ? "shrink" : "expand");
     fullscreenToggle.setAttribute("aria-label", fullscreen ? "Sair da tela cheia" : "Tela cheia");
   }
@@ -107,7 +98,7 @@ export function createPlayer(stage, { preferences }) {
       sound.detach();
       stage.dataset.screen = "idle";
       syncAmbient();
-      if (fullscreenElement()) toggleFullscreen();
+      if (fullscreenElement() === stage) toggleStageFullscreen();
     },
 
     // Resolução/FPS reais (e, para quem assiste, o atraso) no selo "Ao vivo". Vazio esconde.
@@ -124,8 +115,4 @@ export function createPlayer(stage, { preferences }) {
       hostAvatar.src = profile?.avatarUrl ?? "";
     },
   };
-}
-
-function fullscreenElement() {
-  return document.fullscreenElement ?? document.webkitFullscreenElement;
 }

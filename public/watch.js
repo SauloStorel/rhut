@@ -6,12 +6,14 @@ const STATS_INTERVAL_MS = 2000;
 const RETRY_MS = 3000;
 const OFFER_TIMEOUT_MS = 10_000;
 
-// Quem assiste recebe a tela de quem transmite. Se a conexão de vídeo cair, pede outra para quem transmite
-// (request-offer) até voltar; a mesma coisa depois de reconectar à sala, se o vídeo não estiver passando.
+// Quem assiste recebe a tela de quem transmite, mas só depois de escolher assistir (como no Discord): até lá,
+// a sala mostra o convite e as ofertas de vídeo são ignoradas. Se a conexão de vídeo cair, pede outra para quem
+// transmite (request-offer) até voltar; a mesma coisa depois de reconectar à sala, se o vídeo não estiver passando.
 export function watch({ signaling, createPeer, player, screen }) {
   let peer = null;
   let measure = null;
   let playing = false;
+  let paused = true; // ainda não escolheu assistir (ou parou): a conexão de vídeo não é aberta
   let retryTimer = null;
   screen.idle("waiting");
 
@@ -25,9 +27,10 @@ export function watch({ signaling, createPeer, player, screen }) {
     welcome: ({ resumed }) => {
       if (!resumed) return;
       signaling.send({ type: "stop-broadcast" });
-      if (peer?.connectionState !== "connected") requestOffer();
+      if (!paused && peer?.connectionState !== "connected") requestOffer();
     },
     offer: async ({ description }) => {
+      if (paused) return;
       clearTimeout(retryTimer);
       peer?.close();
       const current = createPeer((candidate) => signaling.send({ type: "candidate", candidate }));
@@ -37,7 +40,7 @@ export function watch({ signaling, createPeer, player, screen }) {
         playing = true;
         player.watch(stream);
         screen.controls("watching");
-        screen.renderCameras();
+        screen.renderCall();
       });
       onFailure(current, () => current === peer && reconnect());
 
@@ -47,7 +50,9 @@ export function watch({ signaling, createPeer, player, screen }) {
       signaling.send({ type: "answer", description: current.localDescription });
     },
     candidate: ({ candidate }) => addCandidate(peer, candidate),
+    // A próxima transmissão começa de novo com o convite.
     "host-left": () => {
+      paused = true;
       reset();
       screen.idle("ended");
     },
@@ -75,11 +80,24 @@ export function watch({ signaling, createPeer, player, screen }) {
   }
 
   return {
-    // Tem alguém transmitindo e a imagem ainda não chegou: "conectando", em vez de "ninguém está transmitindo".
+    // Tem alguém transmitindo: convite para assistir ou, se já escolheu assistir, "conectando".
     hostChanged(host) {
       if (playing) return;
-      if (host) return screen.idle("connecting");
-      if (screen.current() === "connecting") screen.idle("waiting");
+      if (host) return screen.idle(paused ? "invite" : "connecting");
+      if (["connecting", "invite"].includes(screen.current())) screen.idle("waiting");
+    },
+
+    // Para de receber a tela (e de gastar a banda dela) e volta ao convite.
+    pause() {
+      paused = true;
+      reset();
+      screen.idle("invite");
+    },
+
+    resume() {
+      paused = false;
+      screen.idle("connecting");
+      requestOffer();
     },
 
     close() {

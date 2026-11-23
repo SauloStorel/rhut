@@ -13,12 +13,13 @@ export function broadcast(stream, initialQuality, { signaling, createPeer, playe
   let active = true;
 
   const refreshStatus = async () => {
-    const sending = await sendingQuality([...peers.values()]);
+    const watching = [...peers.values()].filter((peer) => peer.connectionState === "connected");
+    const sending = await sendingQuality(watching);
     // Uma leitura que terminou depois do "Parar" não pode sobrescrever o status novo.
     if (!active) return;
 
     player.setQuality(sending?.label);
-    screen.status([watchingText(peers.size), uploadText(quality, peers.size), sending && `${sending.label} ${sending.codec}`, sending?.hint].filter(Boolean).join(" · "));
+    screen.status([watchingText(watching.length), uploadText(quality, watching.length), sending && `${sending.label} ${sending.codec}`, sending?.hint].filter(Boolean).join(" · "));
   };
   const statsTimer = setInterval(refreshStatus, STATS_INTERVAL_MS);
 

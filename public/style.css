@@ -186,11 +186,19 @@ button { font: inherit; color: inherit; }
 
 /* ---------- Palco ---------- */
 
+/* A chamada: a tela transmitida e as câmeras como cards. Em grade, --cols vem do JS conforme o espaço;
+   em foco, só o card escolhido fica aqui e os outros vão para a barra de baixo (.cameras). */
 .stage-area {
   position: relative;
   display: grid;
+  grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 10px;
   min-height: 0;
 }
+
+/* O brilho do modo ambiente só faz sentido com a tela sozinha em destaque. */
+.stage-area:has(> .camera-tile) .ambient { display: none; }
 
 /* Modo ambiente: o canvas é minúsculo (32×18) e o blur espalha as cores do vídeo em volta do palco. */
 .ambient {
@@ -285,6 +293,8 @@ video {
   letter-spacing: -0.015em;
   text-wrap: balance;
 }
+
+.idle-action { margin-top: 24px; }
 
 .idle-hint {
   max-width: 44ch;
@@ -685,8 +695,59 @@ video {
   object-fit: cover;
 }
 
-/* A própria câmera aparece espelhada, como num espelho de verdade. */
-.camera-tile[data-self] video { transform: scaleX(-1); }
+/* A câmera da frente aparece espelhada, como num espelho de verdade. */
+.camera-tile[data-mirrored] video { transform: scaleX(-1); }
+
+.stage-area .camera-tile {
+  width: auto;
+  aspect-ratio: auto;
+  background: #000;
+}
+
+.stage-area .camera-tile video,
+.camera-tile:fullscreen video { object-fit: contain; }
+
+/* Card que pode ganhar o foco com um clique. */
+.cameras > *,
+.stage-area[data-layout="grid"] > .camera-tile { cursor: pointer; }
+
+/* A tela transmitida na barra de baixo: miniatura, sem os controles do player. */
+.cameras > .stage {
+  flex: none;
+  width: 200px;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+}
+
+.cameras > .stage :is(.overlay, .idle-hint, .idle-action, .idle-mark) { display: none; }
+.cameras > .stage .idle { padding: 8px; }
+.cameras > .stage .idle-title { margin: 0; font-size: 13px; }
+
+.camera-tile:fullscreen { border-radius: 0; background: #000; }
+
+/* Ações de cada câmera: aparecem ao passar o mouse; no toque ficam sempre visíveis. */
+.tile-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 160ms;
+}
+
+.camera-tile:is(:hover, :focus-within) .tile-actions,
+.camera-tile:fullscreen .tile-actions { opacity: 1; }
+
+.tile-actions .icon-button {
+  width: 34px;
+  height: 34px;
+  background: rgb(17 18 20 / 0.72);
+}
+
+@media (pointer: coarse) {
+  .tile-actions { opacity: 1; }
+}
 
 .camera-tile figcaption {
   position: absolute;
@@ -702,23 +763,6 @@ video {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-
-/* Facecam: a câmera de quem transmite, em bolinha sobre a tela. */
-.overlay > .facecam {
-  position: absolute;
-  right: 20px;
-  bottom: 76px;
-}
-
-.facecam .camera-tile {
-  width: 168px;
-  aspect-ratio: 1;
-  border: 3px solid var(--live);
-  border-radius: 50%;
-  box-shadow: var(--shadow-pop);
-}
-
-.facecam figcaption { display: none; }
 
 /* ---------- Dock ---------- */
 
@@ -967,11 +1011,10 @@ video {
   .volume .slider { display: none; }
   .picker-sketch { display: none; }
   .camera-tile { width: 140px; }
-  .facecam .camera-tile { width: 96px; }
-  .overlay > .facecam { right: 12px; bottom: 64px; }
+  .cameras > .stage { width: 140px; }
   #camera-toggle span { display: none; }
   .dock .button-primary { flex: 1; justify-content: center; }
-  #camera-toggle { padding: 0 12px; }
+  :is(#camera-toggle, #camera-flip) { padding: 0 12px; }
   .guide { padding: 24px 20px; }
   .toasts { top: 58px; right: 10px; }
 }

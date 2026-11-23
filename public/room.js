@@ -10,7 +10,7 @@ import { createPeer } from "./peer.js";
 import { DEFAULT_QUALITY, QUALITY_PRESETS } from "./quality.js";
 import { connectRoom } from "./signaling.js";
 import { accentFromIcon, inkFor } from "./ui/accent.js";
-import { createCameraStrip } from "./ui/camera-strip.js";
+import { SCREEN, createCallLayout } from "./ui/call-layout.js";
 import { icon, setIcon } from "./ui/dom.js";
 import { createDropdown } from "./ui/dropdown.js";
 import { createPlayer } from "./ui/player.js";
@@ -36,6 +36,10 @@ const connectionBadge = document.querySelector("#connection");
 const shareButton = document.querySelector("#share");
 const stopButton = document.querySelector("#stop");
 const cameraButton = document.querySelector("#camera-toggle");
+const flipButton = document.querySelector("#camera-flip");
+const startWatchingButton = document.querySelector("#start-watching");
+const stopWatchingButton = document.querySelector("#stop-watching");
+const gridButton = document.querySelector("#grid-toggle");
 const qualityPicker = document.querySelector("#quality-picker");
 const dock = document.querySelector("#dock");
 const idle = document.querySelector("#idle");
@@ -44,21 +48,24 @@ const stage = document.querySelector("#stage");
 const SHARE_INVITE = canShare ? " Para transmitir, escolha a qualidade e clique em Compartilhar tela." : "";
 
 // O que a tela mostra quando não tem vídeo, e quais controles ficam disponíveis em cada caso.
+// `card`: o palco continua como um card da chamada mesmo com câmeras ligadas (nas outras telas ele sai da frente).
+// `invite`: mostra o botão "Assistir transmissão". "{host}" vira o nome de quem transmite.
 const IDLE_SCREENS = {
-  waiting: { title: "Ninguém está transmitindo ainda", hint: `Quando alguém compartilhar a tela, a imagem aparece aqui sozinha.${SHARE_INVITE}`, pulse: true, controls: "idle" },
-  connecting: { title: "Conectando à transmissão", hint: "A imagem aparece aqui em alguns segundos.", pulse: true, controls: "watching" },
-  ended: { title: "A transmissão terminou", hint: `Fique por aqui: se alguém compartilhar de novo, aparece automaticamente.${SHARE_INVITE}`, pulse: true, controls: "idle" },
-  closed: { title: "Sala encerrada", hint: "Abra outra com /live no Discord.", pulse: false, controls: "none" },
-  closing: { title: "Sala encerrada", hint: "Esta aba fecha sozinha em instantes.", pulse: false, controls: "none" },
+  waiting: { title: "Ninguém está transmitindo ainda", hint: `Quando alguém compartilhar a tela, o convite para assistir aparece aqui.${SHARE_INVITE}`, pulse: true, controls: "idle", card: false, invite: false },
+  invite: { title: "{host} está transmitindo", hint: "A tela só começa a chegar quando você escolhe assistir.", pulse: true, controls: "watching", card: true, invite: true },
+  connecting: { title: "Conectando à transmissão", hint: "A imagem aparece aqui em alguns segundos.", pulse: true, controls: "watching", card: true, invite: false },
+  ended: { title: "A transmissão terminou", hint: `Fique por aqui: se alguém compartilhar de novo, o convite aparece aqui.${SHARE_INVITE}`, pulse: true, controls: "idle", card: false, invite: false },
+  closed: { title: "Sala encerrada", hint: "Abra outra com /live no Discord.", pulse: false, controls: "none", card: true, invite: false },
+  closing: { title: "Sala encerrada", hint: "Esta aba fecha sozinha em instantes.", pulse: false, controls: "none", card: true, invite: false },
 };
 
 // Quem está só assistindo não vê "Compartilhar tela": já tem alguém transmitindo e o servidor recusaria.
 const CONTROLS = {
-  idle: { share: canShare, quality: canShare, stop: false, camera: canUseCamera },
-  watching: { share: false, quality: false, stop: false, camera: canUseCamera },
-  guide: { share: false, quality: true, stop: false, camera: false },
-  broadcasting: { share: false, quality: true, stop: true, camera: canUseCamera },
-  none: { share: false, quality: false, stop: false, camera: false },
+  idle: { share: canShare, quality: canShare, stop: false, camera: canUseCamera, stopWatching: false },
+  watching: { share: false, quality: false, stop: false, camera: canUseCamera, stopWatching: true },
+  guide: { share: false, quality: true, stop: false, camera: false, stopWatching: false },
+  broadcasting: { share: false, quality: true, stop: true, camera: canUseCamera, stopWatching: false },
+  none: { share: false, quality: false, stop: false, camera: false, stopWatching: false },
 };
 
 const { iceServers, guild, accentColor } = await fetch(`/api/rooms/${roomId}`)
@@ -72,17 +79,19 @@ const signaling = connectRoom({ roomId, pass: takePass(), resume: resumeToken(),
 const newPeer = (sendCandidate) => createPeer(iceServers, sendCandidate);
 const player = createPlayer(stage, { preferences });
 const presence = createPresence();
-const cameraStrip = createCameraStrip();
-const cameras = createCameras({ signaling, createPeer: newPeer, onChange: renderCameras });
+const layout = createCallLayout({ isStageOptional, onChange: syncDock });
+const cameras = createCameras({ signaling, createPeer: newPeer, onChange: renderCall });
 const codecPreferences = hardwareFirstCodecs();
 const qualityPickerControl = setupQualityPicker();
 let idleScreen = "waiting";
 let myPeerId = null;
 let hostPeerId = null;
+let hostName = "";
+let session = null;
 const shareGuide = createShareGuide({ stage, preferences, onContinue: startSharing, onCancel: () => showIdle(idleScreen) });
 
 // O que assistir e transmitir precisam da página.
-const screen = { idle: showIdle, controls: showControls, status: showStatus, renderCameras, current: () => idleScreen };
+const screen = { idle: showIdle, controls: showControls, status: showStatus, renderCall, current: () => idleScreen };
 
 // Mensagens que valem para a página inteira, assistindo ou transmitindo.
 signaling.on({
@@ -93,6 +102,7 @@ signaling.on({
   presence: ({ people }) => {
     const host = presence.update(people);
     hostPeerId = host?.peerId ?? null;
+    hostName = host?.name ?? "";
     player.setHost(host);
     cameras.sync(people);
     session.hostChanged?.(hostPeerId === myPeerId ? null : host);
@@ -100,20 +110,39 @@ signaling.on({
   "room-closed": showRoomClosed,
 });
 
-let session = startWatching();
+session = startWatching();
 
+// O guia e a própria tela ganham o foco: quem transmite vê o que está mandando em destaque.
 shareButton.addEventListener("click", () => {
-  if (shareGuide.open()) showControls("guide");
-  else startSharing();
+  if (!shareGuide.open()) return startSharing();
+
+  showControls("guide");
+  layout.focus(SCREEN);
 });
 
 stopButton.addEventListener("click", switchToWatching);
+
+// Como no Discord: a transmissão só chega a quem escolhe assistir, e ganha o foco ao começar.
+startWatchingButton.addEventListener("click", () => {
+  session.resume();
+  layout.focus(SCREEN);
+});
+
+stopWatchingButton.addEventListener("click", () => {
+  session.pause();
+  layout.showGrid();
+});
+
+gridButton.addEventListener("click", () => layout.showGrid());
+
+flipButton.addEventListener("click", () => cameras.flip().catch((error) => warn(`Não deu para virar a câmera: ${cameraError(error)}`)));
 
 cameraButton.addEventListener("click", async () => {
   if (cameras.isOn()) return cameras.turnOff();
 
   await cameras.turnOn().catch((error) => warn(`Não deu para ligar a câmera: ${cameraError(error)}`));
 });
+
 
 async function startSharing() {
   const quality = QUALITY_PRESETS[qualityPickerControl.value()];
@@ -122,6 +151,7 @@ async function startSharing() {
 
   session.close();
   session = broadcast(stream, quality, { signaling, createPeer: newPeer, player, screen, codecPreferences, onStop: switchToWatching });
+  layout.focus(SCREEN);
 
   const warning = audioWarning(stream);
   if (warning) warn(warning);
@@ -136,10 +166,13 @@ function startWatching() {
   return watch({ signaling, createPeer: newPeer, player, screen });
 }
 
-// A câmera de quem está transmitindo vira a facecam sobre a tela; as outras vão para a faixa.
-function renderCameras() {
-  const screenIsLive = stage.dataset.screen === "video";
-  cameraStrip.render(cameras.tiles(), { facecamPeerId: screenIsLive ? hostPeerId : null });
+// O palco sai da frente quando não tem nada a mostrar e há câmeras para ver.
+function isStageOptional() {
+  return stage.dataset.screen === "idle" && !IDLE_SCREENS[idleScreen].card;
+}
+
+function renderCall() {
+  layout.render(cameras.tiles());
 
   const on = cameras.isOn();
   cameraButton.setAttribute("aria-pressed", String(on));
@@ -167,24 +200,33 @@ function closeTab() {
 }
 
 function showIdle(screen) {
-  const { title, hint, pulse, controls } = IDLE_SCREENS[screen];
+  const { title, hint, pulse, controls, invite } = IDLE_SCREENS[screen];
   idleScreen = screen;
   player.clear();
   idle.toggleAttribute("data-pulse", pulse);
-  document.querySelector("#idle-title").textContent = title;
+  document.querySelector("#idle-title").textContent = title.replace("{host}", hostName);
   document.querySelector("#idle-hint").textContent = hint;
+  startWatchingButton.hidden = !invite;
   showControls(controls);
   showStatus("");
-  renderCameras();
+  renderCall();
 }
 
 function showControls(mode) {
-  const { share, quality, stop, camera } = CONTROLS[mode];
+  const { share, quality, stop, camera, stopWatching } = CONTROLS[mode];
   shareButton.hidden = !share;
   qualityPicker.hidden = !quality;
   stopButton.hidden = !stop;
   cameraButton.hidden = !camera;
-  dock.hidden = !(share || quality || stop || camera);
+  stopWatchingButton.hidden = !stopWatching;
+  syncDock();
+}
+
+// "Ver todos" volta para a grade quando algum card está em foco.
+function syncDock() {
+  gridButton.hidden = !layout.isFocused();
+  flipButton.hidden = cameraButton.hidden || !cameras.canFlip();
+  dock.hidden = [shareButton, qualityPicker, stopButton, cameraButton, flipButton, gridButton].every((control) => control.hidden);
 }
 
 function showBranding(guild) {
@@ -266,6 +308,7 @@ const CAMERA_ERRORS = {
   NotAllowedError: "o navegador não deu permissão. Libere a câmera no cadeado da barra de endereço.",
   NotFoundError: "nenhuma câmera encontrada.",
   NotReadableError: "a câmera está em uso por outro programa.",
+  OverconstrainedError: "este aparelho não tem outra câmera.",
 };
 
 function cameraError(error) {
