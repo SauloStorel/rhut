@@ -5,3 +5,6 @@ SESSION_SECRET=
 # Opcional: sem isso a sala usa só STUN (funciona na maioria das redes, mas não em todas)
 TURN_KEY_ID=
 TURN_KEY_API_TOKEN=
+# Opcional: com isso as telas vão pelo SFU do Cloudflare Realtime (uma cópia só, em vez de uma por pessoa)
+REALTIME_APP_ID=
+REALTIME_APP_SECRET=

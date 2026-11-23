@@ -133,7 +133,7 @@ export class Room extends DurableObject<Env> {
     const expired = (await this.ghosts()).filter((ghost) => ghost.expiresAt <= now);
     for (const { peer } of expired) {
       await this.ctx.storage.delete(GHOST_PREFIX + peer.id);
-      await this.leave();
+      await this.announceChange();
     }
 
     const idleCloseAt = await this.ctx.storage.get<number>("idleCloseAt");
@@ -174,7 +174,7 @@ export class Room extends DurableObject<Env> {
     const peer = this.depart(ws);
     if (!peer) return;
 
-    if (DELIBERATE_CLOSE_CODES.has(code)) await this.leave();
+    if (DELIBERATE_CLOSE_CODES.has(code)) await this.announceChange();
     else await this.becomeGhost(peer);
     await this.scheduleAlarm();
   }
@@ -193,8 +193,7 @@ export class Room extends DurableObject<Env> {
 
   private async updatePeer(ws: WebSocket, peer: Peer) {
     ws.serializeAttachment(peer);
-    await this.broadcastPresence();
-    await this.syncSharers();
+    await this.announceChange();
   }
 
   // Continua na lista para os outros até o prazo de voltar. A presença sai de novo porque uma mensagem que chegou
@@ -204,8 +203,9 @@ export class Room extends DurableObject<Env> {
     await this.broadcastPresence();
   }
 
-  // Alguém saiu de vez (fechou a aba ou não voltou a tempo): os outros param de receber a tela dele pela presença.
-  private async leave() {
+  // Alguém mudou ou saiu de vez (fechou a aba, não voltou a tempo): a sala fica sabendo pela presença (quem saiu
+  // para de mandar e de receber tela) e o Discord, por quem está transmitindo.
+  private async announceChange() {
     await this.broadcastPresence();
     await this.syncSharers();
   }

@@ -13,7 +13,7 @@ export default defineConfig({
           DISCORD_BOT_TOKEN: "token-de-teste",
           DISCORD_PUBLIC_KEY: "0".repeat(64),
           REALTIME_APP_ID: "app-de-teste",
-          REALTIME_APP_TOKEN: "token-do-sfu",
+          REALTIME_APP_SECRET: "token-do-sfu",
         },
       },
     }),

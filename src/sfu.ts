@@ -20,7 +20,7 @@ const MAX_BODY_LENGTH = 64 * 1024;
 type Params = Record<string, string | undefined>;
 
 export function sfuEnabled(env: Env) {
-  return Boolean(env.REALTIME_APP_ID && env.REALTIME_APP_TOKEN);
+  return Boolean(env.REALTIME_APP_ID && env.REALTIME_APP_SECRET);
 }
 
 export async function createSfuSession(request: Request, env: Env, { room }: Params) {
@@ -47,7 +47,7 @@ export async function updateSfuSession(request: Request, env: Env, { room, actio
 function sfuApi(env: Env, method: string, path: string, body?: string) {
   return fetch(`${API}/${env.REALTIME_APP_ID}/${path}`, {
     method,
-    headers: { Authorization: `Bearer ${env.REALTIME_APP_TOKEN}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${env.REALTIME_APP_SECRET}`, "Content-Type": "application/json" },
     body,
   });
 }

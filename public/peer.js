@@ -18,9 +18,3 @@ export function onFailure(peer, callback) {
     if (peer.connectionState === "failed") callback();
   });
 }
-
-const HEALTHY_STATES = new Set(["new", "connecting", "connected"]);
-
-export function isHealthy(peer) {
-  return HEALTHY_STATES.has(peer?.connectionState);
-}
