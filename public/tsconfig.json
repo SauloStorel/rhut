@@ -1,0 +1,15 @@
+{
+  // O front é JavaScript puro (sem build); o TypeScript só confere, a partir do uso e dos comentários JSDoc.
+  "compilerOptions": {
+    "target": "es2023",
+    "module": "es2022",
+    "moduleResolution": "bundler",
+    "lib": ["es2023", "dom", "dom.iterable"],
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": false,
+    "skipLibCheck": true
+  },
+  "include": ["./**/*.js"]
+}

@@ -158,7 +158,7 @@ button { font: inherit; color: inherit; }
 
 .avatar-stack li:first-child { margin-left: 0; }
 
-.avatar-stack li[data-role="host"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--live); z-index: 1; }
+.avatar-stack li[data-sharing] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--live); z-index: 1; }
 
 .avatar {
   display: grid;
@@ -186,9 +186,14 @@ button { font: inherit; color: inherit; }
 
 /* ---------- Palco ---------- */
 
+/* A chamada: as telas transmitidas, as câmeras e o card de aviso. Em grade, --cols vem do JS conforme o espaço;
+   em foco, só o card escolhido fica aqui e os outros vão para a barra de baixo (.cameras). */
 .stage-area {
   position: relative;
   display: grid;
+  grid-template-columns: repeat(var(--cols, 1), minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 10px;
   min-height: 0;
 }
 
@@ -207,24 +212,35 @@ button { font: inherit; color: inherit; }
 
 .ambient[data-on] { opacity: 0.6; }
 
-.stage {
+/* Todo card da chamada. Linha e coluna presas ao tamanho do card: sem isso a linha cresce até a altura nativa
+   do vídeo e corta os controles. O card é um contêiner: o que cabe dentro dele depende do tamanho dele. */
+.tile {
   position: relative;
   display: grid;
-  /* Linha e coluna presas ao tamanho do palco: sem isso a linha cresce até a altura nativa do vídeo e corta os controles. */
   grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   min-height: 0;
+  margin: 0;
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius);
+  container-type: size;
+  animation: pop-in 320ms var(--ease-out);
+}
+
+.tile:fullscreen { border-radius: 0; background: #000; }
+
+/* Card que pode ganhar o foco com um clique. */
+.cameras > .tile,
+.stage-area[data-layout="grid"]:has(> .tile + .tile) > .tile { cursor: pointer; }
+
+/* O card de aviso (ninguém transmitindo, sala encerrada) e o passo antes de compartilhar. */
+.stage {
   background:
     radial-gradient(120% 80% at 50% 0%, color-mix(in oklab, var(--accent) 7%, transparent), transparent 60%),
     var(--surface);
 }
 
-.stage[data-screen="video"] { background: #000; }
-/* Cada tela do palco mostra só o que é dela. */
-.stage:not([data-screen="video"]) :is(video, .overlay),
-.stage:not([data-screen="idle"]) .idle,
+.stage:not([data-screen="message"]) .idle,
 .stage:not([data-screen="guide"]) .guide { display: none; }
 
 video {
@@ -513,11 +529,11 @@ video {
 
 .controls-end { display: flex; gap: 4px; }
 
-#ambient-toggle[aria-pressed="false"] { opacity: 0.5; }
+.ambient-toggle[aria-pressed="false"] { opacity: 0.5; }
 
-.stage[data-idle-pointer] .overlay .controls,
-.stage[data-idle-pointer] .overlay::after { opacity: 0; transition: opacity 600ms var(--ease-out); }
-.stage[data-idle-pointer] { cursor: none; }
+.screen-tile[data-idle-pointer] .overlay .controls,
+.screen-tile[data-idle-pointer] .overlay::after { opacity: 0; transition: opacity 600ms var(--ease-out); }
+.screen-tile[data-idle-pointer] { cursor: none; }
 
 .live-badge {
   display: inline-flex;
@@ -656,7 +672,101 @@ video {
 
 .slider:hover::-webkit-slider-thumb { transform: scale(1.15); }
 
+/* ---------- Telas transmitidas ---------- */
+
+.screen-tile { background: #000; }
+
+/* Cada estado mostra só o que é dele: convite e "conectando" sem vídeo; tocando e prévia sem convite. */
+.screen-tile:not([data-state="playing"], [data-state="preview"]) :is(video, .overlay),
+.screen-tile:is([data-state="playing"], [data-state="preview"]) .screen-invite,
+.screen-tile[data-state="preview"] .only-watching,
+.screen-tile:not([data-state="invite"]) :is([data-part="watch"], .screen-invite-hint-invite),
+.screen-tile:not([data-state="connecting"]) .screen-invite-hint-connecting { display: none; }
+
+.screen-invite {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 20px;
+  text-align: center;
+  background:
+    radial-gradient(120% 80% at 50% 0%, color-mix(in oklab, var(--live) 9%, transparent), transparent 60%),
+    var(--surface);
+}
+
+.screen-invite-avatar {
+  position: relative;
+  margin-bottom: 10px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--live);
+}
+
+.avatar-lg { width: 72px; height: 72px; font-size: 26px; }
+
+.screen-tile[data-state="connecting"] .screen-invite-avatar::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1.5px solid var(--live);
+  animation: ripple 2s var(--ease-out) infinite;
+}
+
+.screen-invite-title {
+  margin: 0;
+  font-size: clamp(16px, 2vw, 20px);
+  font-weight: 650;
+  text-wrap: balance;
+}
+
+.screen-invite-hint {
+  max-width: 40ch;
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 14px;
+  text-wrap: pretty;
+}
+
+/* Card pequeno (grade com várias telas, barra de baixo): só o essencial. */
+@container (max-height: 240px) {
+  .screen-invite { gap: 4px; padding: 10px; }
+  .screen-invite-hint, .screen-invite-avatar { display: none; }
+  .screen-invite-title { font-size: 14px; }
+  .unmute-prompt { padding: 8px 14px; font-size: 13px; }
+  .overlay { padding: 8px; }
+  .live-quality, .volume .slider { display: none; }
+}
+
+/* Miniatura bem pequena (barra de baixo no celular): sobra o nome; clicar traz o card para o foco. */
+@container (max-height: 90px) {
+  .screen-tile :is(.controls, .unmute-prompt, [data-part="watch"], .live-label) { display: none; }
+}
+
 /* ---------- Câmeras ---------- */
+
+.camera-tile {
+  border-radius: 12px;
+  background: var(--raised);
+}
+
+.camera-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* A câmera da frente aparece espelhada, como num espelho de verdade. */
+.camera-tile[data-mirrored] video { transform: scaleX(-1); }
+
+.stage-area .camera-tile { background: #000; }
+
+.stage-area .camera-tile video,
+.camera-tile:fullscreen video { object-fit: contain; }
+
+/* ---------- Barra de baixo (cards fora de foco) ---------- */
 
 .cameras {
   display: flex;
@@ -666,27 +776,40 @@ video {
   scrollbar-color: var(--hover) transparent;
 }
 
-.camera-tile {
-  position: relative;
+.cameras > .tile {
   flex: none;
   width: 200px;
   aspect-ratio: 16 / 9;
-  margin: 0;
-  overflow: hidden;
-  border: 1px solid var(--line);
   border-radius: 12px;
-  background: var(--raised);
-  animation: pop-in 320ms var(--ease-out);
 }
 
-.camera-tile video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.cameras > .stage :is(.idle-hint, .idle-mark) { display: none; }
+.cameras > .stage .idle { padding: 8px; }
+.cameras > .stage .idle-title { margin: 0; font-size: 13px; }
+
+/* Ações de cada câmera: aparecem ao passar o mouse; no toque ficam sempre visíveis. */
+.tile-actions {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 160ms;
 }
 
-/* A própria câmera aparece espelhada, como num espelho de verdade. */
-.camera-tile[data-mirrored] video { transform: scaleX(-1); }
+.camera-tile:is(:hover, :focus-within) .tile-actions,
+.camera-tile:fullscreen .tile-actions { opacity: 1; }
+
+.tile-actions .icon-button {
+  width: 34px;
+  height: 34px;
+  background: rgb(17 18 20 / 0.72);
+}
+
+@media (pointer: coarse) {
+  .tile-actions { opacity: 1; }
+}
 
 .camera-tile figcaption {
   position: absolute;
@@ -703,22 +826,78 @@ video {
   text-overflow: ellipsis;
 }
 
-/* Facecam: a câmera de quem transmite, em bolinha sobre a tela. */
-.overlay > .facecam {
+/* ---------- Reações ---------- */
+
+.reactions { position: relative; }
+
+#reactions-trigger { padding: 0 12px; }
+
+.reactions-tray {
   position: absolute;
-  right: 20px;
-  bottom: 76px;
-}
-
-.facecam .camera-tile {
-  width: 168px;
-  aspect-ratio: 1;
-  border: 3px solid var(--live);
-  border-radius: 50%;
+  right: 0;
+  bottom: calc(100% + 8px);
+  z-index: 10;
+  display: flex;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid rgb(255 255 255 / 0.08);
+  border-radius: 999px;
+  background: var(--raised);
   box-shadow: var(--shadow-pop);
+  transform-origin: bottom right;
+  animation: menu-in 200ms var(--ease-out);
 }
 
-.facecam figcaption { display: none; }
+.reaction-option {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  font-size: 24px;
+  cursor: pointer;
+  transition: background 160ms, transform 160ms var(--ease-out);
+}
+
+.reaction-option:hover { background: var(--hover); transform: scale(1.12); }
+.reaction-option:active { transform: scale(0.94); }
+
+/* As reações sobem pelo palco por cima dos cards, sem bloquear cliques. */
+.reactions-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  container-type: size;
+  pointer-events: none;
+}
+
+.reaction {
+  position: absolute;
+  left: var(--x);
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  animation: float-up 2600ms var(--ease-out) forwards;
+}
+
+.reaction-emoji { font-size: 40px; line-height: 1; filter: drop-shadow(0 4px 10px rgb(0 0 0 / 0.45)); }
+
+.reaction-name {
+  max-width: 14ch;
+  overflow: hidden;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgb(17 18 20 / 0.78);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 
 /* ---------- Dock ---------- */
 
@@ -946,6 +1125,13 @@ video {
   to { transform: translateX(16px); opacity: 0; }
 }
 
+@keyframes float-up {
+  from { transform: translate(-50%, 0) scale(0.6); opacity: 0; }
+  12% { transform: translate(-50%, -24px) scale(1); opacity: 1; }
+  75% { opacity: 1; }
+  to { transform: translate(-50%, -60cqh) scale(1); opacity: 0; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
   .idle[data-pulse] .idle-mark::before { opacity: 0.5; transform: scale(1.2); }
@@ -966,12 +1152,11 @@ video {
   .quality-list { left: 0; right: auto; width: min(340px, calc(100vw - 20px)); transform-origin: bottom left; }
   .volume .slider { display: none; }
   .picker-sketch { display: none; }
-  .camera-tile { width: 140px; }
-  .facecam .camera-tile { width: 96px; }
-  .overlay > .facecam { right: 12px; bottom: 64px; }
+  .cameras > .tile { width: 140px; }
   #camera-toggle span { display: none; }
   .dock .button-primary { flex: 1; justify-content: center; }
-  #camera-toggle { padding: 0 12px; }
+  :is(#camera-toggle, #camera-flip) { padding: 0 12px; }
+  .reactions-tray { right: auto; left: 50%; translate: -50% 0; transform-origin: bottom center; }
   .guide { padding: 24px 20px; }
   .toasts { top: 58px; right: 10px; }
 }

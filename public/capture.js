@@ -6,16 +6,18 @@ import { videoConstraints } from "./quality.js";
 // - displaySurface "window": a escolha do navegador já abre na aba de janelas, onde está o jogo.
 // - surfaceSwitching "include": o Chrome mostra um botão para trocar de janela sem parar a live.
 // - selfBrowserSurface "exclude": tira a própria aba da sala da lista (evita a imagem em "espelho infinito").
-// - sem os filtros de microfone: redução de ruído e ganho automático abaixam e abafam som de jogo.
+// - sem os filtros de microfone (redução de ruído e ganho automático abaixam e abafam som de jogo), em 48 kHz,
+//   a taxa nativa do Opus, para o navegador não reamostrar o som no caminho.
 export function captureScreen(quality) {
-  return navigator.mediaDevices.getDisplayMedia({
+  // windowAudio, systemAudio e surfaceSwitching ainda não estão nos tipos do DOM do TypeScript.
+  return navigator.mediaDevices.getDisplayMedia(/** @type {DisplayMediaStreamOptions} */ ({
     video: { ...videoConstraints(quality), displaySurface: "window" },
-    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2 },
+    audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2, sampleRate: 48_000 },
     windowAudio: "window",
     systemAudio: "include",
     surfaceSwitching: "include",
     selfBrowserSurface: "exclude",
-  });
+  }));
 }
 
 const AUDIO_WARNINGS = {

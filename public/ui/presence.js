@@ -1,16 +1,17 @@
+import { playChime } from "./chime.js";
 import { avatar, element } from "./dom.js";
 import { showToast } from "./toast.js";
 
 const MAX_AVATARS = 5;
 
-// Avatares de quem está na sala e avisos de "entrou" / "começou a transmitir".
+// Avatares de quem está na sala e avisos de "entrou" / "começou a transmitir", com som ao entrar e sair.
 export function createPresence() {
-  const root = document.querySelector("#presence");
-  const stack = document.querySelector("#avatar-stack");
-  const count = document.querySelector("#presence-count");
-  const seen = new Set();
+  const root = document.getElementById("presence");
+  const stack = document.getElementById("avatar-stack");
+  const count = document.getElementById("presence-count");
+  let present = new Set();
+  let sharing = new Set();
   let me = null;
-  let host = null;
   let firstUpdate = true;
 
   return {
@@ -18,18 +19,18 @@ export function createPresence() {
       me = profile;
     },
 
-    // Recebe a lista do servidor e devolve quem está transmitindo (ou null).
+    // Recebe a lista do servidor a cada mudança.
     update(people) {
       const everyone = uniqueById(people);
-      const nextHost = everyone.find((person) => person.role === "host") ?? null;
+      const nextPresent = new Set(everyone.map((person) => person.id));
+      const nextSharing = new Set(everyone.filter((person) => person.sharing).map((person) => person.id));
 
       renderStack(everyone);
-      if (!firstUpdate) announceChanges(everyone, nextHost);
+      if (!firstUpdate) announceChanges(everyone, nextPresent, nextSharing);
 
-      everyone.forEach((person) => seen.add(person.id));
-      host = nextHost;
+      present = nextPresent;
+      sharing = nextSharing;
       firstUpdate = false;
-      return host;
     },
   };
 
@@ -41,7 +42,7 @@ export function createPresence() {
       ...visible.map((person) => {
         const item = element("li", "", avatar(person));
         item.title = person.id === me?.id ? `${person.name} (você)` : person.name;
-        item.dataset.role = person.role;
+        item.toggleAttribute("data-sharing", person.sharing);
         return item;
       }),
       ...(hidden > 0 ? [element("li", "", element("span", "avatar avatar-more", `+${hidden}`))] : []),
@@ -50,12 +51,17 @@ export function createPresence() {
     root.hidden = everyone.length === 0;
   }
 
-  function announceChanges(everyone, nextHost) {
-    everyone
-      .filter((person) => !seen.has(person.id) && person.id !== me?.id)
-      .forEach((person) => toast(person, "entrou na sala"));
+  // Quem cai por instabilidade continua na lista por um tempo (o servidor espera a volta), então não soa.
+  function announceChanges(everyone, nextPresent, nextSharing) {
+    const others = everyone.filter((person) => person.id !== me?.id);
+    const arrivals = others.filter((person) => !present.has(person.id));
+    const someoneLeft = [...present].some((id) => !nextPresent.has(id) && id !== me?.id);
 
-    if (nextHost && nextHost.id !== host?.id && nextHost.id !== me?.id) toast(nextHost, "começou a transmitir");
+    arrivals.forEach((person) => toast(person, "entrou na sala"));
+    if (arrivals.length > 0) playChime("join");
+    if (someoneLeft) playChime("leave");
+
+    others.filter((person) => nextSharing.has(person.id) && !sharing.has(person.id)).forEach((person) => toast(person, "começou a transmitir"));
   }
 
   function toast(person, action) {
@@ -63,11 +69,12 @@ export function createPresence() {
   }
 }
 
-// A mesma pessoa pode estar em duas abas; aparece uma vez só, e como host se alguma aba estiver transmitindo.
+// A mesma pessoa pode estar em duas abas; aparece uma vez só, e transmitindo se alguma aba estiver.
+// Quem transmite vem primeiro.
 function uniqueById(people) {
   const byId = new Map();
   people.forEach((person) => {
-    if (byId.get(person.id)?.role !== "host") byId.set(person.id, person);
+    if (!byId.get(person.id)?.sharing) byId.set(person.id, person);
   });
-  return [...byId.values()].toSorted((a, b) => (b.role === "host") - (a.role === "host"));
+  return [...byId.values()].toSorted((a, b) => b.sharing - a.sharing);
 }

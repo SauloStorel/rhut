@@ -1,13 +1,14 @@
 // Modo ambiente: as cores do vídeo "vazam" em volta do palco, como no YouTube.
 // Desenha o vídeo num canvas minúsculo (o blur do CSS faz o resto) e mistura cada quadro novo com o anterior,
-// para a luz mudar suave em vez de piscar.
+// para a luz mudar suave em vez de piscar. Segue um vídeo por vez; null apaga.
 const WIDTH = 32;
 const HEIGHT = 18;
 const FRAME_MS = 120;
 const BLEND = 0.25;
 
-export function createAmbient(video, canvas) {
+export function createAmbient(canvas) {
   const context = canvas.getContext("2d");
+  let video = null;
   let timer = null;
   canvas.width = WIDTH;
   canvas.height = HEIGHT;
@@ -19,17 +20,17 @@ export function createAmbient(video, canvas) {
   };
 
   return {
-    start() {
-      if (timer) return;
+    follow(next) {
+      if (next === video) return;
+      clearInterval(timer);
+      video = next;
+      timer = null;
+      delete canvas.dataset.on;
+      if (!video) return;
+
       context.clearRect(0, 0, WIDTH, HEIGHT);
       timer = setInterval(paint, FRAME_MS);
       canvas.dataset.on = "";
-    },
-
-    stop() {
-      clearInterval(timer);
-      timer = null;
-      delete canvas.dataset.on;
     },
   };
 }

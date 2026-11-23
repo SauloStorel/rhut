@@ -1,28 +1,36 @@
-// Uma pessoa compartilha a tela (host) e manda uma conexão WebRTC para cada pessoa assistindo (viewer);
-// qualquer um pode ligar a câmera. Uma conexão só com a sala troca a "apresentação" WebRTC e avisa quem está lá.
-// Este arquivo monta a página; assistir e transmitir moram em watch.js e broadcast.js.
+// Página da sala. Até 4 pessoas transmitem a tela ao mesmo tempo, cada uma num card; quem quiser assistir escolhe
+// a tela, e qualquer um pode ligar a câmera. As telas vão em P2P (uma cópia para cada pessoa assistindo) ou pelo
+// SFU do Cloudflare Realtime, quando configurado (uma cópia só). Uma conexão só com a sala troca a "apresentação"
+// WebRTC e avisa quem está lá. Este arquivo monta as peças e liga os controles.
 
-import { broadcast } from "./broadcast.js";
 import { audioWarning, captureScreen } from "./capture.js";
 import { createCameras } from "./cameras.js";
 import { hardwareFirstCodecs } from "./codecs.js";
 import { createPeer } from "./peer.js";
 import { DEFAULT_QUALITY, QUALITY_PRESETS } from "./quality.js";
+import { resumeToken, takePass } from "./room-tokens.js";
+import { createP2PScreens } from "./screen-p2p.js";
+import { createSfuScreens } from "./screen-sfu.js";
+import { OWN_SCREEN, createScreens } from "./screens.js";
+import { share } from "./share.js";
 import { connectRoom } from "./signaling.js";
-import { accentFromIcon, inkFor } from "./ui/accent.js";
-import { createCameraStrip } from "./ui/camera-strip.js";
+import { safeStorage } from "./storage.js";
+import { createAmbient } from "./ui/ambient.js";
+import { applyAccent, showBranding } from "./ui/branding.js";
+import { createCallLayout } from "./ui/call-layout.js";
+import { createCameraTiles } from "./ui/camera-tiles.js";
 import { icon, setIcon } from "./ui/dom.js";
 import { createDropdown } from "./ui/dropdown.js";
-import { createPlayer } from "./ui/player.js";
 import { createPresence } from "./ui/presence.js";
+import { createReactions } from "./ui/reactions.js";
 import { createShareGuide } from "./ui/share-guide.js";
 import { showToast } from "./ui/toast.js";
-import { watch } from "./watch.js";
 
 const WARNING_MS = 9000;
-const FALLBACK_ACCENT = "#5865f2";
-// Sem a configuração da sala (rede instável, erro no servidor) a página ainda funciona: sem a marca do servidor e só com STUN.
-const FALLBACK_CONFIG = { iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }], guild: null, accentColor: "auto" };
+const CLOSE_TAB_DELAY_MS = 3000;
+const STAGE = "stage";
+// Sem a configuração da sala (rede instável, erro no servidor) a página ainda funciona: sem a marca do servidor, só com STUN e em P2P.
+const FALLBACK_CONFIG = { iceServers: [{ urls: "stun:stun.cloudflare.com:3478" }], guild: null, accentColor: "auto", sfu: false };
 
 const roomId = location.pathname.split("/").pop();
 const canShare = Boolean(navigator.mediaDevices?.getDisplayMedia);
@@ -30,83 +38,106 @@ const canUseCamera = Boolean(navigator.mediaDevices?.getUserMedia);
 const preferences = safeStorage(() => localStorage);
 const tabStorage = safeStorage(() => sessionStorage);
 
-const statusText = document.querySelector("#status");
-const connectionBadge = document.querySelector("#connection");
-const shareButton = document.querySelector("#share");
-const stopButton = document.querySelector("#stop");
-const cameraButton = document.querySelector("#camera-toggle");
-const flipButton = document.querySelector("#camera-flip");
-const qualityPicker = document.querySelector("#quality-picker");
-const dock = document.querySelector("#dock");
-const idle = document.querySelector("#idle");
-const stage = document.querySelector("#stage");
+const statusText = document.getElementById("status");
+const connectionBadge = document.getElementById("connection");
+const shareButton = document.getElementById("share");
+const stopButton = document.getElementById("stop");
+const cameraButton = document.getElementById("camera-toggle");
+const flipButton = document.getElementById("camera-flip");
+const gridButton = document.getElementById("grid-toggle");
+const qualityPicker = document.getElementById("quality-picker");
+const reactionsControl = document.getElementById("reactions");
+const dock = document.getElementById("dock");
+const stage = document.getElementById("stage");
 
 const SHARE_INVITE = canShare ? " Para transmitir, escolha a qualidade e clique em Compartilhar tela." : "";
 
-// O que a tela mostra quando não tem vídeo, e quais controles ficam disponíveis em cada caso.
-const IDLE_SCREENS = {
-  waiting: { title: "Ninguém está transmitindo ainda", hint: `Quando alguém compartilhar a tela, a imagem aparece aqui sozinha.${SHARE_INVITE}`, pulse: true, controls: "idle" },
-  connecting: { title: "Conectando à transmissão", hint: "A imagem aparece aqui em alguns segundos.", pulse: true, controls: "watching" },
-  ended: { title: "A transmissão terminou", hint: `Fique por aqui: se alguém compartilhar de novo, aparece automaticamente.${SHARE_INVITE}`, pulse: true, controls: "idle" },
-  closed: { title: "Sala encerrada", hint: "Abra outra com /live no Discord.", pulse: false, controls: "none" },
+// O card de aviso: aparece quando não tem nenhum outro card (ninguém transmitindo nem com câmera), no passo antes
+// de compartilhar e com a sala encerrada.
+const MESSAGES = {
+  waiting: { title: "Ninguém está transmitindo ainda", hint: `Quando alguém compartilhar a tela, o convite para assistir aparece aqui.${SHARE_INVITE}`, pulse: true },
+  closed: { title: "Sala encerrada", hint: "Abra outra com /live no Discord.", pulse: false },
+  closing: { title: "Sala encerrada", hint: "Esta aba fecha sozinha em instantes.", pulse: false },
 };
 
-// Quem está só assistindo não vê "Compartilhar tela": já tem alguém transmitindo e o servidor recusaria.
+// Os controles do dock em cada momento da página.
 const CONTROLS = {
-  idle: { share: canShare, quality: canShare, stop: false, camera: canUseCamera },
-  watching: { share: false, quality: false, stop: false, camera: canUseCamera },
-  guide: { share: false, quality: true, stop: false, camera: false },
-  broadcasting: { share: false, quality: true, stop: true, camera: canUseCamera },
-  none: { share: false, quality: false, stop: false, camera: false },
+  idle: { share: canShare, quality: canShare, stop: false, camera: canUseCamera, reactions: true },
+  guide: { share: false, quality: true, stop: false, camera: false, reactions: false },
+  sharing: { share: false, quality: true, stop: true, camera: canUseCamera, reactions: true },
+  closed: { share: false, quality: false, stop: false, camera: false, reactions: false },
 };
 
-const { iceServers, guild, accentColor } = await fetch(`/api/rooms/${roomId}`)
+const config = await fetch(`/api/rooms/${roomId}`)
   .then((response) => (response.ok ? response.json() : FALLBACK_CONFIG))
   .catch(() => FALLBACK_CONFIG);
-showBranding(guild);
-applyAccent(guild, accentColor);
+showBranding(config.guild);
+applyAccent(config.guild, config.accentColor);
+
+let mode = "idle";
+let myPeerId = null;
+let me = null;
+let sfuPass = null;
+let people = [];
+let sharing = null;
 
 // Daqui até registrar os handlers não pode ter `await`: as primeiras mensagens da sala chegam logo após conectar.
-const signaling = connectRoom({ roomId, pass: takePass(), resume: resumeToken(), onStatus: (status) => (connectionBadge.hidden = status !== "reconnecting") });
-const newPeer = (sendCandidate) => createPeer(iceServers, sendCandidate);
-const player = createPlayer(stage, { preferences });
-const presence = createPresence();
-const cameraStrip = createCameraStrip();
-const cameras = createCameras({ signaling, createPeer: newPeer, onChange: renderCameras });
+const signaling = connectRoom({ roomId, pass: takePass(roomId, tabStorage), resume: resumeToken(roomId, tabStorage), onStatus: (status) => (connectionBadge.hidden = status !== "reconnecting") });
+const newPeer = (sendCandidate) => createPeer(config.iceServers, sendCandidate);
 const codecPreferences = hardwareFirstCodecs();
+const transport = config.sfu
+  ? createSfuScreens({ roomId, sfuPass: () => sfuPass, iceServers: config.iceServers, codecPreferences })
+  : createP2PScreens({ signaling, createPeer: newPeer, codecPreferences });
+const layout = createCallLayout({ onChange: syncWithLayout });
+const screens = createScreens({
+  transport,
+  ambient: createAmbient(document.getElementById("ambient")),
+  preferences,
+  onChange: renderCall,
+  // Como no Discord: a tela ganha o foco ao começar a assistir, e parar volta para a grade.
+  onWatch: (id) => layout.focus(id),
+  onStopWatching: () => layout.showGrid(),
+});
+const cameraTiles = createCameraTiles();
+const cameras = createCameras({ signaling, createPeer: newPeer, onChange: renderCall });
+const presence = createPresence();
 const qualityPickerControl = setupQualityPicker();
-let idleScreen = "waiting";
-let myPeerId = null;
-let hostPeerId = null;
-const shareGuide = createShareGuide({ stage, preferences, onContinue: startSharing, onCancel: () => showIdle(idleScreen) });
+const shareGuide = createShareGuide({ stage, preferences, onContinue: startSharing, onCancel: closeGuide });
+createReactions({ signaling, nameOf: (peerId) => people.find((person) => person.peerId === peerId)?.name ?? "Alguém" });
 
-// O que assistir e transmitir precisam da página.
-const screen = { idle: showIdle, controls: showControls, status: showStatus, renderCameras, current: () => idleScreen };
-
-// Mensagens que valem para a página inteira, assistindo ou transmitindo.
 signaling.on({
-  welcome: ({ you, peerId }) => {
+  welcome: ({ you, peerId, resumed, sfuPass: pass }) => {
     myPeerId = peerId;
+    me = you;
+    sfuPass = pass;
     presence.setMe(you);
+    // Voltou depois de recarregar a página: a transmissão de antes acabou junto com a página anterior.
+    if (resumed && !sharing) signaling.send({ type: "share", on: false });
   },
-  presence: ({ people }) => {
-    const host = presence.update(people);
-    hostPeerId = host?.peerId ?? null;
-    player.setHost(host);
+  presence: ({ people: next }) => {
+    people = next;
+    presence.update(people);
+    screens.sync(people.filter((person) => person.sharing && person.peerId !== myPeerId));
     cameras.sync(people);
-    session.hostChanged?.(hostPeerId === myPeerId ? null : host);
+    sharing?.sync(people);
   },
   "room-closed": showRoomClosed,
 });
 
-let session = startWatching();
+showMessage("waiting");
+setMode("idle");
 
+// O guia e a própria tela ganham o foco: quem transmite vê o que está mandando em destaque.
 shareButton.addEventListener("click", () => {
-  if (shareGuide.open()) showControls("guide");
-  else startSharing();
+  if (!shareGuide.open()) return startSharing();
+
+  setMode("guide");
+  layout.focus(STAGE);
 });
 
-stopButton.addEventListener("click", switchToWatching);
+stopButton.addEventListener("click", stopSharing);
+gridButton.addEventListener("click", () => layout.showGrid());
+flipButton.addEventListener("click", () => cameras.flip().catch((error) => warn(`Não deu para virar a câmera: ${cameraError(error)}`)));
 
 cameraButton.addEventListener("click", async () => {
   if (cameras.isOn()) return cameras.turnOff();
@@ -114,116 +145,121 @@ cameraButton.addEventListener("click", async () => {
   await cameras.turnOn().catch((error) => warn(`Não deu para ligar a câmera: ${cameraError(error)}`));
 });
 
-flipButton.addEventListener("click", () =>
-  cameras.flip().catch((error) => warn(`Não deu para virar a câmera: ${cameraError(error)}`)),
-);
-
 async function startSharing() {
   const quality = QUALITY_PRESETS[qualityPickerControl.value()];
   const stream = await captureScreen(quality).catch(() => null);
-  if (!stream) return showIdle(idleScreen);
+  closeGuide();
+  if (!stream) return;
 
-  session.close();
-  session = broadcast(stream, quality, { signaling, createPeer: newPeer, player, screen, codecPreferences, onStop: switchToWatching });
+  sharing = share(stream, quality, {
+    transport,
+    signaling,
+    onStatus: showStatus,
+    onQuality: (label) => screens.setOwnQuality(label),
+    onStop: stopSharing,
+    onRefused: (message) => {
+      stopSharing();
+      warn(message);
+    },
+  });
+  screens.showOwn(stream, me);
+  setMode("sharing");
+  layout.focus(OWN_SCREEN);
 
   const warning = audioWarning(stream);
   if (warning) warn(warning);
 }
 
-function switchToWatching() {
-  session.close();
-  session = startWatching();
+function stopSharing() {
+  sharing?.close();
+  sharing = null;
+  screens.hideOwn();
+  showStatus("");
+  setMode("idle");
 }
 
-function startWatching() {
-  return watch({ signaling, createPeer: newPeer, player, screen });
+function closeGuide() {
+  shareGuide.close();
+  setMode(sharing ? "sharing" : "idle");
 }
 
-// A câmera de quem está transmitindo vira a facecam sobre a tela; as outras vão para a faixa.
-function renderCameras() {
-  const screenIsLive = stage.dataset.screen === "video";
-  cameraStrip.render(cameras.tiles(), { facecamPeerId: screenIsLive ? hostPeerId : null });
+// Telas primeiro, depois câmeras; o card de aviso só quando não tem mais nada a mostrar (ou no guia e na sala encerrada).
+function renderCall() {
+  const tiles = [...screens.tiles(), ...cameraTiles.render(cameras.tiles())];
+  const showsStage = mode === "guide" || mode === "closed" || tiles.length === 0;
+  layout.render([...(showsStage ? [{ id: STAGE, element: stage }] : []), ...tiles]);
 
   const on = cameras.isOn();
   cameraButton.setAttribute("aria-pressed", String(on));
   cameraButton.setAttribute("aria-label", on ? "Desligar câmera" : "Ligar câmera");
   setIcon(cameraButton.querySelector("svg"), on ? "camera-off" : "camera");
-  cameras.canFlip().then((canFlip) => (flipButton.hidden = !(on && canFlip && !cameraButton.hidden)));
 }
 
-// Sala fechada pelo Discord (botão "Fechar sala") ou por ficar vazia: não tem mais o que fazer aqui.
-function showRoomClosed() {
-  session.close();
-  session = { close() {} };
-  if (cameras.isOn()) cameras.turnOff();
-  showIdle("closed");
+// "Ver todos" volta para a grade quando algum card está em foco; o modo ambiente segue a tela sozinha no palco.
+function syncWithLayout() {
+  gridButton.hidden = !layout.isFocused();
+  flipButton.hidden = cameraButton.hidden || !cameras.canFlip();
+  dock.hidden = [shareButton, qualityPicker, stopButton, cameraButton, flipButton, gridButton, reactionsControl].every((control) => control.hidden);
+  screens.followAmbient(layout.soloId());
 }
 
-function showIdle(screen) {
-  const { title, hint, pulse, controls } = IDLE_SCREENS[screen];
-  idleScreen = screen;
-  player.clear();
-  idle.toggleAttribute("data-pulse", pulse);
-  document.querySelector("#idle-title").textContent = title;
-  document.querySelector("#idle-hint").textContent = hint;
-  showControls(controls);
-  showStatus("");
-  renderCameras();
-}
-
-function showControls(mode) {
-  const { share, quality, stop, camera } = CONTROLS[mode];
-  shareButton.hidden = !share;
+function setMode(next) {
+  const { share: canStart, quality, stop, camera, reactions } = CONTROLS[next];
+  mode = next;
+  shareButton.hidden = !canStart;
   qualityPicker.hidden = !quality;
   stopButton.hidden = !stop;
   cameraButton.hidden = !camera;
-  if (!camera) flipButton.hidden = true;
-  dock.hidden = !(share || quality || stop || camera);
+  reactionsControl.hidden = !reactions;
+  renderCall();
 }
 
-function showBranding(guild) {
-  if (!guild) return;
-
-  document.title = `${guild.name} · rhut`;
-  document.querySelector("#brand-name").textContent = guild.name;
-  if (!guild.iconUrl) return;
-
-  // Só troca o ícone padrão pelo do servidor depois que a imagem carregar de verdade.
-  // (SVG não tem a propriedade `hidden` do HTML, então os fallbacks usam o atributo.)
-  const serverIcons = document.querySelectorAll(".server-icon");
-  serverIcons[0].addEventListener("load", () => {
-    serverIcons.forEach((serverIcon) => (serverIcon.hidden = false));
-    document.querySelectorAll(".brand-fallback").forEach((fallback) => fallback.setAttribute("hidden", ""));
-  });
-  serverIcons.forEach((serverIcon) => (serverIcon.src = guild.iconUrl));
+function showMessage(name) {
+  const { title, hint, pulse } = MESSAGES[name];
+  stage.querySelector(".idle").toggleAttribute("data-pulse", pulse);
+  document.getElementById("idle-title").textContent = title;
+  document.getElementById("idle-hint").textContent = hint;
 }
 
-// ACCENT_COLOR "auto" tira a cor do ícone do servidor; um hex fixo (ex: "#e5242b") manda.
-async function applyAccent(guild, accentColor) {
-  const fromIcon = accentColor === "auto" && guild?.iconUrl ? await accentFromIcon(guild.iconUrl) : null;
-  const accent = fromIcon ?? (accentColor === "auto" ? FALLBACK_ACCENT : accentColor);
-  document.documentElement.style.setProperty("--accent", accent);
-  document.documentElement.style.setProperty("--accent-ink", inkFor(accent));
+// Sala fechada pelo Discord (botão "Fechar sala") ou por ficar vazia: não tem mais o que fazer aqui.
+// Quem estava na sala tem a aba fechada; quem abriu o link de uma sala já encerrada só vê o aviso.
+function showRoomClosed() {
+  sharing?.close();
+  sharing = null;
+  screens.closeAll();
+  if (cameras.isOn()) cameras.turnOff();
+  showStatus("");
+  shareGuide.close();
+  showMessage(myPeerId ? "closing" : "closed");
+  setMode("closed");
+  if (myPeerId) setTimeout(closeTab, CLOSE_TAB_DELAY_MS);
+}
+
+// O navegador só deixa fechar a aba aberta por um link que não navegou depois (voltar do login do Discord conta
+// como navegar). Quando recusa, a aba continua aberta mostrando a sala encerrada.
+function closeTab() {
+  window.close();
+  setTimeout(() => showMessage("closed"), CLOSE_TAB_DELAY_MS);
 }
 
 function setupQualityPicker() {
   const saved = preferences.get("quality");
   const showCurrent = (key) => {
-    document.querySelector("#quality-name").textContent = QUALITY_PRESETS[key].name;
-    document.querySelector("#quality-bitrate").textContent = `${QUALITY_PRESETS[key].bitrate} por pessoa`;
+    document.getElementById("quality-name").textContent = QUALITY_PRESETS[key].name;
+    document.getElementById("quality-bitrate").textContent = `${QUALITY_PRESETS[key].bitrate} por ${config.sfu ? "transmissão" : "pessoa"}`;
   };
   let current = Object.hasOwn(QUALITY_PRESETS, saved) ? saved : DEFAULT_QUALITY;
 
   createDropdown({
-    trigger: document.querySelector("#quality-trigger"),
-    list: document.querySelector("#quality-list"),
+    trigger: document.getElementById("quality-trigger"),
+    list: document.getElementById("quality-list"),
     options: Object.entries(QUALITY_PRESETS).map(([value, { name, detail, bitrate }]) => ({ value, name, detail, aside: bitrate })),
     initial: current,
     onChange(key) {
       current = key;
       showCurrent(key);
       preferences.set("quality", key);
-      session.setQuality?.(QUALITY_PRESETS[key]);
+      sharing?.setQuality(QUALITY_PRESETS[key]);
     },
   });
   showCurrent(current);
@@ -231,35 +267,11 @@ function setupQualityPicker() {
   return { value: () => current };
 }
 
-// O passe vem no link pessoal do Discord (?pass=...). Guarda na aba e tira da URL, junto com o ?convidado de quem
-// cancelou o login: copiar o endereço da barra não leva a identidade de ninguém nem pula o login de quem recebe.
-function takePass() {
-  const url = new URL(location.href);
-  const fromUrl = url.searchParams.get("pass");
-  const storageKey = `pass:${roomId}`;
-
-  if (fromUrl) tabStorage.set(storageKey, fromUrl);
-  url.searchParams.delete("pass");
-  url.searchParams.delete("convidado");
-  history.replaceState(null, "", url);
-  return fromUrl ?? tabStorage.get(storageKey);
-}
-
-// O segredo de reconexão sobrevive a recarregar a página: quem recarrega volta como a mesma pessoa em vez de
-// aparecer duplicado até a sala desistir da conexão antiga (o navegador nem sempre avisa que a página saiu).
-// Só na recarga: uma aba duplicada (que copia o sessionStorage) entra como outra pessoa.
-function resumeToken() {
-  const storageKey = `resume:${roomId}`;
-  const isReload = performance.getEntriesByType("navigation")[0]?.type === "reload";
-  const token = (isReload && tabStorage.get(storageKey)) || crypto.randomUUID();
-  tabStorage.set(storageKey, token);
-  return token;
-}
-
 const CAMERA_ERRORS = {
   NotAllowedError: "o navegador não deu permissão. Libere a câmera no cadeado da barra de endereço.",
   NotFoundError: "nenhuma câmera encontrada.",
   NotReadableError: "a câmera está em uso por outro programa.",
+  OverconstrainedError: "este aparelho não tem outra câmera.",
 };
 
 function cameraError(error) {
@@ -272,23 +284,4 @@ function warn(text) {
 
 function showStatus(text) {
   statusText.textContent = text;
-}
-
-// localStorage/sessionStorage podem estar bloqueados (aba anônima, cookies desligados), e até acessar
-// a propriedade pode lançar erro. Aí só não lembra a escolha.
-function safeStorage(getStorage) {
-  return {
-    get(key) {
-      try {
-        return getStorage().getItem(key);
-      } catch {
-        return null;
-      }
-    },
-    set(key, value) {
-      try {
-        getStorage().setItem(key, value);
-      } catch {}
-    },
-  };
 }

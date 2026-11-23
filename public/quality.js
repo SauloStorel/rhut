@@ -14,6 +14,8 @@ export const QUALITY_PRESETS = {
 
 export const DEFAULT_QUALITY = "1080p30";
 
+/** @typedef {(typeof QUALITY_PRESETS)[keyof typeof QUALITY_PRESETS]} QualityPreset */
+
 export function videoConstraints({ width, height, frameRate }) {
   return { width: { max: width }, height: { max: height }, frameRate: { ideal: frameRate, max: frameRate } };
 }

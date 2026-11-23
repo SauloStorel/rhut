@@ -3,16 +3,16 @@
 const SKIP_KEY = "skip-share-guide";
 
 export function createShareGuide({ stage, preferences, onContinue, onCancel }) {
-  const guide = stage.querySelector("#guide");
-  const skip = stage.querySelector("#guide-skip");
-  const continueButton = stage.querySelector("#guide-continue");
+  const guide = document.getElementById("guide");
+  const skip = /** @type {HTMLInputElement} */ (document.getElementById("guide-skip"));
+  const continueButton = document.getElementById("guide-continue");
 
   // O clique em "Continuar" é o gesto que o navegador exige para abrir a escolha de tela.
   continueButton.addEventListener("click", () => {
     if (skip.checked) preferences.set(SKIP_KEY, "1");
     onContinue();
   });
-  stage.querySelector("#guide-cancel").addEventListener("click", onCancel);
+  document.getElementById("guide-cancel").addEventListener("click", onCancel);
   guide.addEventListener("keydown", (event) => {
     if (event.key === "Escape") onCancel();
   });
@@ -25,6 +25,10 @@ export function createShareGuide({ stage, preferences, onContinue, onCancel }) {
       stage.dataset.screen = "guide";
       continueButton.focus();
       return true;
+    },
+
+    close() {
+      stage.dataset.screen = "message";
     },
   };
 }

@@ -11,16 +11,16 @@ Obrigado por querer ajudar no rhut. Issues e pull requests são bem-vindos.
 
 1. Faça um fork do repositório e crie uma branch a partir da `main`.
 2. Rode localmente seguindo a seção [Rodando localmente](README.md#rodando-localmente) do README.
-3. Antes de abrir a PR, rode `npm run typecheck`.
+3. Antes de abrir a PR, rode `npm run typecheck` e `npm test`.
 4. Abra a pull request explicando o que mudou e por quê. Se mexer na interface, coloque um print.
 
-Toda PR passa pelo typecheck automático e pela revisão do mantenedor antes de entrar na `main`.
+Toda PR passa pelo typecheck e pelos testes automáticos e pela revisão do mantenedor antes de entrar na `main`.
 
 ## Estilo
 
 - O código segue o que já existe ao redor: nomes claros, funções pequenas, comentários só onde o porquê não é óbvio.
 - O front não usa framework nem etapa de build: HTML, CSS e módulos JavaScript servidos como estão.
-- A interface é em português. Textos sem emojis.
+- A interface é em português. Textos sem emojis (as reações da sala são a exceção: o emoji é o próprio conteúdo).
 
 ## Licença
 

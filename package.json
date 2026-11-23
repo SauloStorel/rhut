@@ -14,14 +14,17 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --var DEV_ROOMS:on",
     "deploy": "wrangler deploy",
-    "typecheck": "tsc --noEmit",
-    "register": "node --env-file=.env scripts/register-commands.mjs"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p public && tsc --noEmit -p test",
+    "register": "node --env-file=.env scripts/register-commands.mjs",
+    "test": "vitest run"
   },
   "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.9.0",
     "@cloudflare/workers-types": "^5.20261008.1",
     "typescript": "^7.0.2",
+    "vitest": "^4.1.12",
     "wrangler": "^4.149.0"
   },
   "allowScripts": {

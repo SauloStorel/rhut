@@ -1,4 +1,5 @@
 import type { Guild } from "./guild";
+import type { Profile } from "./identity";
 import type { OpenStatus, RoomInfo } from "./room";
 
 // Peças das mensagens do bot no Discord, usadas pelo aviso da sala e pelo painel.
@@ -6,24 +7,36 @@ import type { OpenStatus, RoomInfo } from "./room";
 export const JOIN_ROOM_ACTION = "join-room";
 export const CLOSE_ROOM_ACTION = "close-room";
 export const OPEN_ROOM_ACTION = "open-room";
+export const PICK_ROOM_ACTION = "pick-room";
 
 export const ButtonStyle = { PRIMARY: 1, SECONDARY: 2, SUCCESS: 3, DANGER: 4, LINK: 5 } as const;
 export const LIVE_RED = 0xda373c;
 
-const ComponentType = { ACTION_ROW: 1, BUTTON: 2 } as const;
+const ComponentType = { ACTION_ROW: 1, BUTTON: 2, STRING_SELECT: 3 } as const;
 const DISCORD_BLURPLE = 0x5865f2;
 const MAX_LABEL = 80;
+const MAX_OPTION_TEXT = 100;
+export const MAX_SELECT_OPTIONS = 25;
 
 type Button = { style: number; label: string } & ({ custom_id: string } | { url: string });
+type SelectOption = { label: string; value: string; description?: string };
 type RoomLinks = Pick<RoomInfo, "roomId" | "guildId" | "pageUrl" | "voiceChannelId">;
+type Crowd = Pick<RoomInfo, "people" | "voiceChannelId" | "sharers">;
 
-const CROWD: Record<OpenStatus, (people: number) => string | null> = {
+// Quem transmite não conta como "assistindo".
+const CROWD: Record<OpenStatus, (people: number, sharing: number) => string | null> = {
   waiting: (people) => (people > 0 ? `${people} na sala` : null),
-  live: (people) => (people > 1 ? `${people - 1} assistindo` : null),
+  live: (people, sharing) => (people > sharing ? `${people - sharing} assistindo` : null),
 };
 
 export function row(...buttons: Button[]) {
   return { type: ComponentType.ACTION_ROW, components: buttons.map((button) => ({ type: ComponentType.BUTTON, ...button, label: truncate(button.label) })) };
+}
+
+// Menu de escolha numa fileira só (cabe até MAX_SELECT_OPTIONS opções, contra 5 botões por fileira).
+export function selectRow(customId: string, placeholder: string, options: SelectOption[]) {
+  const option = ({ label, value, description }: SelectOption) => ({ label: truncate(label, MAX_OPTION_TEXT), value, description: description && truncate(description, MAX_OPTION_TEXT) });
+  return { type: ComponentType.ACTION_ROW, components: [{ type: ComponentType.STRING_SELECT, custom_id: customId, placeholder, options: options.map(option) }] };
 }
 
 // Com login pelo Discord, "Entrar" é um link direto para a sala; sem, o clique pede ao bot o link pessoal.
@@ -39,8 +52,15 @@ export function callButtons({ guildId, voiceChannelId }: RoomLinks): Button[] {
 
 // O que acompanha o estado da sala no aviso e no painel: quantas pessoas e em qual call ("3 assistindo", "na call #Geral").
 // Salas abertas antes da contagem não guardaram `people`.
-export function roomDetails(status: OpenStatus, { people, voiceChannelId }: Pick<RoomInfo, "people" | "voiceChannelId">) {
-  return [CROWD[status](people ?? 0), voiceChannelId && `na call <#${voiceChannelId}>`].filter((detail): detail is string => Boolean(detail));
+export function roomDetails(status: OpenStatus, { people, voiceChannelId, sharers }: Crowd) {
+  return [CROWD[status](people ?? 0, sharers?.length ?? 0), voiceChannelId && `na call <#${voiceChannelId}>`].filter((detail): detail is string => Boolean(detail));
+}
+
+// "**Ana** está transmitindo desde há 5 minutos", "**Ana** e **Bia** estão transmitindo desde...".
+export function sharingSentence(sharers: Profile[] | undefined, liveSince: number) {
+  const names = (sharers?.length ? sharers.map((sharer) => sharer.name) : ["Alguém"]).map((name) => `**${escapeMarkdown(name)}**`);
+  const listed = names.length > 1 ? `${names.slice(0, -1).join(", ")} e ${names.at(-1)}` : names[0];
+  return `${listed} ${names.length > 1 ? "estão" : "está"} transmitindo desde ${relativeTime(liveSince)}`;
 }
 
 // "auto" só dá para calcular no navegador (precisa ler o ícone); no Discord fica o azul padrão.
@@ -61,6 +81,6 @@ export function relativeTime(ms: number) {
   return `<t:${Math.floor(ms / 1000)}:R>`;
 }
 
-function truncate(label: string) {
-  return label.length > MAX_LABEL ? `${label.slice(0, MAX_LABEL - 1)}…` : label;
+function truncate(text: string, max = MAX_LABEL) {
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }

@@ -2,12 +2,12 @@ import { DurableObject } from "cloudflare:workers";
 import { discordApi } from "./discord-api";
 import type { Guild } from "./guild";
 import { panel } from "./panel";
-import type { OpenStatus, RoomInfo } from "./room";
+import { type OpenStatus, type RoomInfo, roomStub } from "./room";
 
 // Um por servidor do Discord. Guarda onde está o painel (canal escolhido com /painel) e as salas abertas, que
 // avisam aqui quando mudam de estado; cada mudança edita a mesma mensagem do painel.
 
-export type RoomCard = Pick<RoomInfo, "roomId" | "guildId" | "openerName" | "host" | "liveSince" | "people" | "pageUrl" | "voiceChannelId"> & {
+export type RoomCard = Pick<RoomInfo, "roomId" | "guildId" | "openerName" | "sharers" | "liveSince" | "people" | "pageUrl" | "voiceChannelId"> & {
   status: OpenStatus;
 };
 
@@ -19,7 +19,7 @@ export class Lobby extends DurableObject<Env> {
   // Posta o painel no canal e apaga o anterior, se havia. Retorna false se o bot não conseguiu postar.
   async install(channelId: string, guild: Guild | null) {
     const previous = await this.place();
-    const response = await discordApi(this.env, "POST", `/channels/${channelId}/messages`, panel(await this.cards(), guild, this.env.ACCENT_COLOR));
+    const response = await discordApi(this.env, "POST", `/channels/${channelId}/messages`, panel(await this.openCards(), guild, this.env.ACCENT_COLOR));
     if (!response.ok) return false;
 
     const { id } = await response.json<{ id: string }>();
@@ -59,8 +59,18 @@ export class Lobby extends DurableObject<Env> {
     const place = await this.place();
     if (!place) return;
 
-    const response = await discordApi(this.env, "PATCH", messagePath(place), panel(await this.cards(), place.guild, this.env.ACCENT_COLOR));
+    const response = await discordApi(this.env, "PATCH", messagePath(place), panel(await this.openCards(), place.guild, this.env.ACCENT_COLOR));
     if (response.status === 404) await this.ctx.storage.delete("place");
+  }
+
+  // Sala que fechou sem conseguir sair do painel (o Discord falhou bem na hora) sai na próxima edição.
+  // Só "closed" conta: a sala que está abrindo agora ainda não guardou o estado e não pode sumir da lista.
+  private async openCards() {
+    const cards = await this.cards();
+    const statuses = await Promise.all(cards.map(async (card) => (await roomStub(this.env, card.roomId).info())?.status));
+    const open = cards.filter((_card, index) => statuses[index] !== "closed");
+    if (open.length !== cards.length) await this.saveCards(open);
+    return open;
   }
 
   private place() {

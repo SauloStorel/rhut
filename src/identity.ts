@@ -24,6 +24,13 @@ export function profileOf(user: DiscordUser, member: DiscordMember | undefined, 
   return { id: user.id, name: member?.nick || user.global_name || user.username, avatarUrl: guildAvatar || userAvatar || defaultAvatar };
 }
 
+// O Discord manda as permissões de quem clicou já resolvidas no canal; dono do servidor vem com todas.
+const ADMINISTRATOR = 1n << 3n;
+
+export function isAdmin(member: DiscordMember | undefined) {
+  return (BigInt(member?.permissions ?? 0) & ADMINISTRATOR) === ADMINISTRATOR;
+}
+
 export const SESSION_MAX_AGE_SECONDS = SESSION_TTL_SECONDS;
 
 export function signPass(env: Env, roomId: string, userId: string) {
@@ -43,18 +50,39 @@ export function verifySession(env: Env, session: string | null) {
   return verifyToken(env, SESSION_SCOPE, session);
 }
 
-async function signToken(env: Env, scope: string, userId: string, ttlSeconds: number) {
+// `subject` é quem o token identifica: uma pessoa do Discord, um participante da sala ou uma sessão do SFU.
+async function signToken(env: Env, scope: string, subject: string, ttlSeconds: number) {
   const expiresAt = Math.floor(Date.now() / 1000) + ttlSeconds;
-  const signature = await crypto.subtle.sign("HMAC", await signingKey(env), encoder.encode(`${scope}.${userId}.${expiresAt}`));
-  return `${userId}.${expiresAt}.${toBase64Url(signature)}`;
+  const signature = await crypto.subtle.sign("HMAC", await signingKey(env), encoder.encode(`${scope}.${subject}.${expiresAt}`));
+  return `${subject}.${expiresAt}.${toBase64Url(signature)}`;
 }
 
-async function verifyToken(env: Env, scope: string, token: string | null) {
-  const [userId, expiresAt, signature] = token?.split(".") ?? [];
-  if (!userId || !signature || Number(expiresAt) < Date.now() / 1000) return null;
+// Sala aberta pelo bot com o SFU ligado: só quem está conectado nela cria sessão no SFU (o passe vem no "welcome"),
+// e cada sessão só aceita mudanças de quem a criou (o passe da sessão vem na resposta de quem criou).
+export function signSfuPass(env: Env, roomId: string, peerId: string) {
+  return signToken(env, `sfu.${roomId}`, peerId, PASS_TTL_SECONDS);
+}
 
-  const valid = await crypto.subtle.verify("HMAC", await signingKey(env), fromBase64Url(signature), encoder.encode(`${scope}.${userId}.${expiresAt}`));
-  return valid ? userId : null;
+export function verifySfuPass(env: Env, roomId: string, pass: string | null) {
+  return verifyToken(env, `sfu.${roomId}`, pass);
+}
+
+export function signSfuSession(env: Env, roomId: string, sessionId: string) {
+  return signToken(env, `sfu-session.${roomId}`, sessionId, PASS_TTL_SECONDS);
+}
+
+export function verifySfuSession(env: Env, roomId: string, grant: string | null) {
+  return verifyToken(env, `sfu-session.${roomId}`, grant);
+}
+
+// Link cortado ou cookie adulterado vira "sem identidade" (convidado), nunca um erro 500.
+async function verifyToken(env: Env, scope: string, token: string | null) {
+  const [subject, expiresAt, signature] = token?.split(".") ?? [];
+  const signatureBytes = signature && fromBase64Url(signature);
+  if (!subject || !signatureBytes || Number(expiresAt) < Date.now() / 1000) return null;
+
+  const valid = await crypto.subtle.verify("HMAC", await signingKey(env), signatureBytes, encoder.encode(`${scope}.${subject}.${expiresAt}`));
+  return valid ? subject : null;
 }
 
 function signingKey(env: Env) {
@@ -65,6 +93,11 @@ function toBase64Url(buffer: ArrayBuffer) {
   return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
+// Null quando o texto nem é base64 (o atob lança erro).
 function fromBase64Url(text: string) {
-  return Uint8Array.from(atob(text.replace(/-/g, "+").replace(/_/g, "/")), (char) => char.charCodeAt(0));
+  try {
+    return Uint8Array.from(atob(text.replace(/-/g, "+").replace(/_/g, "/")), (char) => char.charCodeAt(0));
+  } catch {
+    return null;
+  }
 }
