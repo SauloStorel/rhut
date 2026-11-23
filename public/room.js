@@ -38,17 +38,17 @@ const canUseCamera = Boolean(navigator.mediaDevices?.getUserMedia);
 const preferences = safeStorage(() => localStorage);
 const tabStorage = safeStorage(() => sessionStorage);
 
-const statusText = document.querySelector("#status");
-const connectionBadge = document.querySelector("#connection");
-const shareButton = document.querySelector("#share");
-const stopButton = document.querySelector("#stop");
-const cameraButton = document.querySelector("#camera-toggle");
-const flipButton = document.querySelector("#camera-flip");
-const gridButton = document.querySelector("#grid-toggle");
-const qualityPicker = document.querySelector("#quality-picker");
-const reactionsControl = document.querySelector("#reactions");
-const dock = document.querySelector("#dock");
-const stage = document.querySelector("#stage");
+const statusText = document.getElementById("status");
+const connectionBadge = document.getElementById("connection");
+const shareButton = document.getElementById("share");
+const stopButton = document.getElementById("stop");
+const cameraButton = document.getElementById("camera-toggle");
+const flipButton = document.getElementById("camera-flip");
+const gridButton = document.getElementById("grid-toggle");
+const qualityPicker = document.getElementById("quality-picker");
+const reactionsControl = document.getElementById("reactions");
+const dock = document.getElementById("dock");
+const stage = document.getElementById("stage");
 
 const SHARE_INVITE = canShare ? " Para transmitir, escolha a qualidade e clique em Compartilhar tela." : "";
 
@@ -91,7 +91,7 @@ const transport = config.sfu
 const layout = createCallLayout({ onChange: syncWithLayout });
 const screens = createScreens({
   transport,
-  ambient: createAmbient(document.querySelector("#ambient")),
+  ambient: createAmbient(document.getElementById("ambient")),
   preferences,
   onChange: renderCall,
   // Como no Discord: a tela ganha o foco ao começar a assistir, e parar volta para a grade.
@@ -217,8 +217,8 @@ function setMode(next) {
 function showMessage(name) {
   const { title, hint, pulse } = MESSAGES[name];
   stage.querySelector(".idle").toggleAttribute("data-pulse", pulse);
-  document.querySelector("#idle-title").textContent = title;
-  document.querySelector("#idle-hint").textContent = hint;
+  document.getElementById("idle-title").textContent = title;
+  document.getElementById("idle-hint").textContent = hint;
 }
 
 // Sala fechada pelo Discord (botão "Fechar sala") ou por ficar vazia: não tem mais o que fazer aqui.
@@ -245,14 +245,14 @@ function closeTab() {
 function setupQualityPicker() {
   const saved = preferences.get("quality");
   const showCurrent = (key) => {
-    document.querySelector("#quality-name").textContent = QUALITY_PRESETS[key].name;
-    document.querySelector("#quality-bitrate").textContent = `${QUALITY_PRESETS[key].bitrate} por ${config.sfu ? "transmissão" : "pessoa"}`;
+    document.getElementById("quality-name").textContent = QUALITY_PRESETS[key].name;
+    document.getElementById("quality-bitrate").textContent = `${QUALITY_PRESETS[key].bitrate} por ${config.sfu ? "transmissão" : "pessoa"}`;
   };
   let current = Object.hasOwn(QUALITY_PRESETS, saved) ? saved : DEFAULT_QUALITY;
 
   createDropdown({
-    trigger: document.querySelector("#quality-trigger"),
-    list: document.querySelector("#quality-list"),
+    trigger: document.getElementById("quality-trigger"),
+    list: document.getElementById("quality-list"),
     options: Object.entries(QUALITY_PRESETS).map(([value, { name, detail, bitrate }]) => ({ value, name, detail, aside: bitrate })),
     initial: current,
     onChange(key) {

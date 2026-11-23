@@ -17,7 +17,8 @@ export function takePass(roomId, tabStorage) {
 // Só na recarga: uma aba duplicada (que copia o sessionStorage) entra como outra pessoa.
 export function resumeToken(roomId, tabStorage) {
   const storageKey = `resume:${roomId}`;
-  const isReload = performance.getEntriesByType("navigation")[0]?.type === "reload";
+  const [navigation] = /** @type {PerformanceNavigationTiming[]} */ (performance.getEntriesByType("navigation"));
+  const isReload = navigation?.type === "reload";
   const token = (isReload && tabStorage.get(storageKey)) || crypto.randomUUID();
   tabStorage.set(storageKey, token);
   return token;

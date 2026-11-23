@@ -9,14 +9,15 @@ import { videoConstraints } from "./quality.js";
 // - sem os filtros de microfone (redução de ruído e ganho automático abaixam e abafam som de jogo), em 48 kHz,
 //   a taxa nativa do Opus, para o navegador não reamostrar o som no caminho.
 export function captureScreen(quality) {
-  return navigator.mediaDevices.getDisplayMedia({
+  // windowAudio, systemAudio e surfaceSwitching ainda não estão nos tipos do DOM do TypeScript.
+  return navigator.mediaDevices.getDisplayMedia(/** @type {DisplayMediaStreamOptions} */ ({
     video: { ...videoConstraints(quality), displaySurface: "window" },
     audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 2, sampleRate: 48_000 },
     windowAudio: "window",
     systemAudio: "include",
     surfaceSwitching: "include",
     selfBrowserSurface: "exclude",
-  });
+  }));
 }
 
 const AUDIO_WARNINGS = {

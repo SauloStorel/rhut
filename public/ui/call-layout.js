@@ -6,8 +6,8 @@ const GAP_PX = 10;
 // - Foco: clicar num card deixa ele grande e manda os outros para a barra de baixo.
 // Os elementos mudam de lugar (palco ↔ barra) sem ser recriados, para o vídeo não piscar.
 export function createCallLayout({ onChange }) {
-  const main = document.querySelector(".stage-area");
-  const bar = document.querySelector("#cameras");
+  const main = /** @type {HTMLElement} */ (document.querySelector(".stage-area"));
+  const bar = document.getElementById("cameras");
   const clickable = new WeakSet();
   let tiles = []; // { id, element }, na ordem em que aparecem
   let focused = null;
@@ -60,7 +60,7 @@ export function createCallLayout({ onChange }) {
 
   function arrange() {
     const count = main.querySelectorAll(":scope > .tile").length;
-    main.style.setProperty("--cols", bestColumns(count, main.clientWidth, main.clientHeight));
+    main.style.setProperty("--cols", String(bestColumns(count, main.clientWidth, main.clientHeight)));
   }
 
   // Clicar num card que não está em foco traz ele para o foco; botões e controles do card não contam,

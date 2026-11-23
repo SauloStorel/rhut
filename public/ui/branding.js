@@ -7,12 +7,12 @@ export function showBranding(guild) {
   if (!guild) return;
 
   document.title = `${guild.name} · rhut`;
-  document.querySelector("#brand-name").textContent = guild.name;
+  document.getElementById("brand-name").textContent = guild.name;
   if (!guild.iconUrl) return;
 
   // Só troca o ícone padrão pelo do servidor depois que a imagem carregar de verdade.
   // (SVG não tem a propriedade `hidden` do HTML, então os fallbacks usam o atributo.)
-  const serverIcons = document.querySelectorAll(".server-icon");
+  const serverIcons = /** @type {NodeListOf<HTMLImageElement>} */ (document.querySelectorAll(".server-icon"));
   serverIcons[0].addEventListener("load", () => {
     serverIcons.forEach((serverIcon) => (serverIcon.hidden = false));
     document.querySelectorAll(".brand-fallback").forEach((fallback) => fallback.setAttribute("hidden", ""));

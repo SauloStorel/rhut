@@ -17,6 +17,7 @@ export function tuneGameAudio(stream) {
 
 // Vale para os dois lados da negociação: na resposta de quem assiste e na resposta que o SFU dá a quem transmite.
 // Os parâmetros que o navegador já pôs (minptime etc.) ficam; os nossos têm prioridade.
+/** @param {string} sdp @returns {string} */
 export function withGameAudio(sdp) {
   const payloadType = sdp.match(/a=rtpmap:(\d+) opus\/48000\/2/i)?.[1];
   if (!payloadType) return sdp;

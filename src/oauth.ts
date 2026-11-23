@@ -82,9 +82,14 @@ async function discordUserId(env: Env, code: string, redirectUri: string) {
   return me.ok ? (await me.json<{ id: string }>()).id : null;
 }
 
+// Cookie com escape quebrado (%E0%A4) é tratado como ausente: o decodeURIComponent lançaria erro e daria 500.
 function cookieOf(request: Request, name: string) {
   const pair = request.headers.get("Cookie")?.split(/;\s*/).find((entry) => entry.startsWith(`${name}=`));
-  return pair ? decodeURIComponent(pair.slice(name.length + 1)) : null;
+  try {
+    return pair ? decodeURIComponent(pair.slice(name.length + 1)) : null;
+  } catch {
+    return null;
+  }
 }
 
 function cookie(name: string, value: string, maxAgeSeconds: number) {

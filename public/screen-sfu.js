@@ -13,6 +13,7 @@ export function createSfuScreens({ roomId, sfuPass, iceServers, codecPreferences
     streamKey: (sharer) => sharer.sfu?.tracks.join() ?? null,
 
     // `onLost`: a conexão com o SFU caiu, e quem transmite precisa publicar de novo (com trilhas novas).
+    /** @param {MediaStream} stream @param {import("./quality.js").QualityPreset} quality @param {{ onLost?: () => void }} [options] */
     async publish(stream, quality, { onLost } = {}) {
       const published = await session.push(stream, await codecPreferences);
       const [videoSender] = published.senders.filter((sender) => sender.track.kind === "video");

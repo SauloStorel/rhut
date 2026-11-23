@@ -2,10 +2,11 @@ import { element } from "./dom.js";
 
 const DEFAULT_DURATION_MS = 4000;
 
+/** @param {(Node | string)[]} children @param {{ tone?: string, duration?: number }} [options] */
 export function showToast(children, { tone, duration = DEFAULT_DURATION_MS } = {}) {
   const item = element("li", "toast", ...children);
   if (tone) item.dataset.tone = tone;
-  document.querySelector("#toasts").append(item);
+  document.getElementById("toasts").append(item);
 
   setTimeout(() => {
     item.setAttribute("data-leaving", "");

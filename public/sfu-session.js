@@ -10,6 +10,7 @@ import { onFailure } from "./peer.js";
 export function createSfuSession({ roomId, pass, iceServers }) {
   const lostListeners = new Set();
   let current = null; // Promise da conexão: { pc, sessionId, grant }
+  /** @type {Promise<unknown>} */
   let queue = Promise.resolve();
 
   return {
@@ -66,6 +67,7 @@ export function createSfuSession({ roomId, pass, iceServers }) {
   };
 
   // Uma falha não trava a fila: cada tarefa devolve o próprio erro e a próxima segue.
+  /** @template T @param {() => Promise<T>} task @returns {Promise<T>} */
   function enqueue(task) {
     const run = queue.then(task);
     queue = run.catch(() => {});

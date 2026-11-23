@@ -175,7 +175,7 @@ export class Room extends DurableObject<Env> {
     if (!peer) return;
 
     if (DELIBERATE_CLOSE_CODES.has(code)) await this.leave();
-    else await this.ctx.storage.put<Ghost>(GHOST_PREFIX + peer.id, { peer, expiresAt: Date.now() + RECONNECT_GRACE_MS });
+    else await this.becomeGhost(peer);
     await this.scheduleAlarm();
   }
 
@@ -195,6 +195,13 @@ export class Room extends DurableObject<Env> {
     ws.serializeAttachment(peer);
     await this.broadcastPresence();
     await this.syncSharers();
+  }
+
+  // Continua na lista para os outros até o prazo de voltar. A presença sai de novo porque uma mensagem que chegou
+  // junto com a queda pode ter sido anunciada sem a pessoa (socket fechando não aparece em getWebSockets).
+  private async becomeGhost(peer: Peer) {
+    await this.ctx.storage.put<Ghost>(GHOST_PREFIX + peer.id, { peer, expiresAt: Date.now() + RECONNECT_GRACE_MS });
+    await this.broadcastPresence();
   }
 
   // Alguém saiu de vez (fechou a aba ou não voltou a tempo): os outros param de receber a tela dele pela presença.

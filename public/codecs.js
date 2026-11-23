@@ -5,7 +5,7 @@ const HARDWARE_CANDIDATES = ["video/AV1", "video/H264", "video/VP9"];
 export async function hardwareFirstCodecs() {
   const { codecs } = RTCRtpSender.getCapabilities("video");
   const hardware = await firstHardwareCodec();
-  return codecs.toSorted((a, b) => (b.mimeType === hardware) - (a.mimeType === hardware));
+  return codecs.toSorted((a, b) => Number(b.mimeType === hardware) - Number(a.mimeType === hardware));
 }
 
 async function firstHardwareCodec() {

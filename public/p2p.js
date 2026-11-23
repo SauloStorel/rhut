@@ -49,7 +49,7 @@ export function createSender({ signaling, kind, createPeer, setup }) {
 
 // Lado de quem recebe: aceita a oferta de quem `accepts` deixar e responde. `onPeer` vê cada conexão nova
 // (para acompanhar quedas) e `onTrack` cada trilha que chega, já com o stream de quem mandou.
-export function createReceiver({ signaling, kind, createPeer, accepts = () => true, onPeer = () => {}, onTrack, mungeAnswer = (sdp) => sdp }) {
+export function createReceiver({ signaling, kind, createPeer, accepts = (_from) => true, onPeer = (_from, _peer) => {}, onTrack, mungeAnswer = (sdp) => sdp }) {
   const links = new Map(); // peerId → RTCPeerConnection
 
   signaling.on({

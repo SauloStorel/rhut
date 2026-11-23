@@ -6,9 +6,9 @@ const MAX_AVATARS = 5;
 
 // Avatares de quem está na sala e avisos de "entrou" / "começou a transmitir", com som ao entrar e sair.
 export function createPresence() {
-  const root = document.querySelector("#presence");
-  const stack = document.querySelector("#avatar-stack");
-  const count = document.querySelector("#presence-count");
+  const root = document.getElementById("presence");
+  const stack = document.getElementById("avatar-stack");
+  const count = document.getElementById("presence-count");
   let present = new Set();
   let sharing = new Set();
   let me = null;

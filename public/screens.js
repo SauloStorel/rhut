@@ -100,6 +100,7 @@ export function createScreens({ transport, ambient, preferences, onChange, onWat
     onStopWatching(id);
   }
 
+  /** @param {{ self: boolean, watch?: () => void, stopWatching?: () => void }} options */
   function createTile({ self, watch, stopWatching }) {
     const tile = createScreenTile({ self, onWatch: watch, onStopWatching: stopWatching, onAmbientToggle: toggleAmbient });
     tile.setAmbient(ambientOn);

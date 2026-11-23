@@ -6,14 +6,14 @@ const REACTIONS = ["👏", "😂", "🔥", "😮", "❤️", "💀"];
 // Reações rápidas: o botão do dock abre a fileira de emojis, e cada reação sobe pelo palco de todo mundo com o
 // nome de quem mandou. Dá para mandar várias seguidas; a fileira fecha ao clicar fora ou com Esc.
 export function createReactions({ signaling, nameOf }) {
-  const trigger = document.querySelector("#reactions-trigger");
-  const tray = document.querySelector("#reactions-tray");
-  const layer = document.querySelector("#reactions-layer");
+  const trigger = document.getElementById("reactions-trigger");
+  const tray = document.getElementById("reactions-tray");
+  const layer = document.getElementById("reactions-layer");
 
   tray.replaceChildren(...REACTIONS.map(reactionButton));
   trigger.addEventListener("click", () => setOpen(tray.hidden));
   document.addEventListener("click", (event) => {
-    if (!tray.hidden && !event.target.closest("#reactions")) setOpen(false);
+    if (!tray.hidden && !(/** @type {Element} */ (event.target)).closest("#reactions")) setOpen(false);
   });
   tray.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;

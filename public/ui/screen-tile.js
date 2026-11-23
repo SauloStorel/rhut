@@ -10,10 +10,12 @@ const HIDE_CONTROLS_AFTER_MS = 2500;
 // - "playing": a tela de outra pessoa, com som (até 200%) e o convite "Ativar som" (o som começa mudo pelo autoplay);
 // - "preview": a minha tela, sempre muda, só com tela cheia.
 export function createScreenTile({ self, onWatch, onStopWatching, onAmbientToggle }) {
-  const element = document.querySelector("#screen-tile").content.firstElementChild.cloneNode(true);
-  const part = (name) => element.querySelector(`[data-part="${name}"]`);
-  const video = part("video");
-  const slider = part("slider");
+  const template = /** @type {HTMLTemplateElement} */ (document.getElementById("screen-tile"));
+  const element = /** @type {HTMLElement} */ (template.content.firstElementChild.cloneNode(true));
+  const part = (name) => /** @type {HTMLElement} */ (element.querySelector(`[data-part="${name}"]`));
+  const video = /** @type {HTMLVideoElement} */ (part("video"));
+  const slider = /** @type {HTMLInputElement} */ (part("slider"));
+  const hostAvatar = /** @type {HTMLImageElement} */ (part("avatar"));
   const sound = createSound(syncSound);
   let hideTimer;
 
@@ -40,8 +42,8 @@ export function createScreenTile({ self, onWatch, onStopWatching, onAmbientToggl
     setSharer(person) {
       const name = self ? "Você" : person.name;
       part("name").textContent = name;
-      part("avatar").hidden = !person.avatarUrl;
-      part("avatar").src = person.avatarUrl ?? "";
+      hostAvatar.hidden = !person.avatarUrl;
+      hostAvatar.src = person.avatarUrl ?? "";
       part("invite-avatar").replaceChildren(avatar(person, "avatar avatar-lg"));
       part("invite-title").textContent = `${name} está transmitindo`;
     },
